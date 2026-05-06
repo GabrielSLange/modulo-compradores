@@ -37,8 +37,8 @@ cd meu-modulo-distribuido
 5. Execute a API:
    python main.py
 
-   A API estara rodando em: http://127.0.0.1:8080
-   O Swagger (documentacao) estara em: http://127.0.0.1:8080/docs
+   A API estara rodando em: http://127.0.0.1:5004
+   O Swagger (documentacao) estara em: http://127.0.0.1:5004/docs
 
 ---
 
@@ -55,7 +55,7 @@ Abra um novo terminal (mantenha o do backend rodando) na raiz do projeto:
 3. Inicie o servidor de desenvolvimento:
    npm run dev
 
-   O frontend estara disponivel no endereco indicado no terminal (geralmente http://localhost:5173).
+   O frontend estara disponivel no endereco indicado no terminal (geralmente http://localhost:5173 Atualizar essa URL para seguir o padrão da Infra).
 
 ---
 
