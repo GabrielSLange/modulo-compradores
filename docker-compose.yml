@@ -1,0 +1,28 @@
+services:
+  demanda-service:
+    build:
+      context: ./backend
+    container_name: demanda-service
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "5004:5004"
+    networks:
+      - portal-b2b-network
+
+  demanda-front:
+    build:
+      context: ./frontend
+    container_name: demanda-front
+    restart: unless-stopped
+    ports:
+      - "8084:80"
+    depends_on:
+      - demanda-service
+    networks:
+      - portal-b2b-network
+
+networks:
+  portal-b2b-network:
+    external: true
