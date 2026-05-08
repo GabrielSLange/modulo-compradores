@@ -41,8 +41,12 @@ class DemandaService:
 
         # 4. Chama o evento desacoplado (Kafka)
         payload_evento = {
+            "id_empresa_comprador": nova_demanda.id_empresa_comprador,
             "id_produto": nova_demanda.id_produto,
-            "quantidade": float(nova_demanda.quantidade_desejada)
+            "quantidade_desejada": float(nova_demanda.quantidade_desejada),
+            "preco_maximo": float(nova_demanda.preco_maximo) if nova_demanda.preco_maximo else None,
+            "tipo_demanda": nova_demanda.is_recorrente,
+            "prioridade": nova_demanda.prioridade
         }
         DemandaProducer.publicar_demanda_criada(nova_demanda.id_demanda, payload_evento)
 
@@ -50,5 +54,5 @@ class DemandaService:
     
     @staticmethod
     def listar_demandas_da_empresa(db: Session, id_empresa: str):
-        demandas = db.query(Demanda).filter(Demanda.id_empresa_comprador == id_empresa).order_by(desc(Demanda.criado_em)).all()
+        demandas = db.query(Demanda).filter(Demanda.id_empresa_comprador == id_empresa).order_by(desc(Demanda.data_criacao)).all()
         return demandas

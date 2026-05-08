@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from sqlalchemy import Column, String, Numeric, Boolean, DateTime, Date, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -18,7 +20,7 @@ class Demanda(Base):
     is_recorrente = Column(Boolean, nullable=False, default=False)
     data_proxima_geracao = Column(Date, nullable=True)
     status = Column(String(20), nullable=False, default="aberta")
-    criado_em = Column(DateTime, nullable=False, server_default=func.now())
+    data_criacao = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     atualizado_em = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
 
     # Relacionamentos usando o nome da classe em String
