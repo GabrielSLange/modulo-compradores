@@ -1,15 +1,26 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from Controllers import ping_controller, demanda_controller, endereco_controller, wishlist_controller
+from Jobs.recorrencia_job import iniciar_scheduler
 
 # Importações para o banco de dados local
 from Data.database import engine, SQLALCHEMY_DATABASE_URL, Base
 from Models import endereco_entrega_model, demanda_model, demanda_recorrencia_model, wishlist_item_model
 
+
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("🚀 A iniciar os Jobs de background...")
+    iniciar_scheduler()
+    yield
+
 app = FastAPI(
     title="Módulo de Demanda - Portal B2B",
     description="Microsserviço responsável pelo registro de intenções de compra",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 app.add_middleware(

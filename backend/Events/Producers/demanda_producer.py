@@ -43,3 +43,28 @@ class DemandaProducer:
             
         except Exception as e:
             print(f"[ERRO MENSAGERIA] Falha ao enviar evento: {str(e)}")
+
+    @staticmethod
+    def publicar_demanda_recorrente_gerada(id_nova_demanda: str, dados_demanda: dict):
+        try:
+            producer = DemandaProducer._obter_produtor()
+            topico = "demanda_recorrente_gerada" 
+            
+            evento = {
+                "eventId": str(uuid.uuid4()),
+                "eventType": "demanda_recorrente_gerada",
+                "eventVersion": "1.0",
+                "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+                "source": "modulo-compradores",
+                "correlationId": id_nova_demanda, 
+                "payload": dados_demanda
+            }
+
+            mensagem = json.dumps(evento)
+            producer.produce(topic=topico, key=id_nova_demanda, value=mensagem)
+            producer.flush()
+            
+            print(f"[JOB KAFKA] 🤖 Demanda recorrente gerada automaticamente! ID: {id_nova_demanda}")
+            
+        except Exception as e:
+            print(f"[ERRO MENSAGERIA] Falha ao enviar evento de recorrência: {str(e)}")
