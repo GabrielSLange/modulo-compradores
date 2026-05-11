@@ -1,6 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { mockApi } from "../mocks/store";
+import {
+  listarDemandas,
+  criarDemanda,
+  cancelarDemanda,
+  atualizarStatus,
+  type CriarDemandaPayload,
+} from "@/services/demandaService";
 import type { Demanda, DemandaStatus } from "../types";
 
 const KEY = ["demandas"] as const;
@@ -9,7 +15,7 @@ const KEY = ["demandas"] as const;
 export function useDemandas() {
   return useQuery({
     queryKey: KEY,
-    queryFn: () => mockApi.listDemandas(),
+    queryFn: () => listarDemandas(),
     refetchInterval: 8000,
     staleTime: 4000,
   });
@@ -18,8 +24,7 @@ export function useDemandas() {
 export function useCreateDemanda() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (payload: Parameters<typeof mockApi.createDemanda>[0]) =>
-      mockApi.createDemanda(payload),
+    mutationFn: (payload: CriarDemandaPayload) => criarDemanda(payload),
     // Optimistic UI: insere a demanda imediatamente; rollback se a API falhar.
     onMutate: async (payload) => {
       await qc.cancelQueries({ queryKey: KEY });
@@ -47,7 +52,7 @@ export function useUpdateStatus() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, status }: { id: string; status: DemandaStatus }) =>
-      mockApi.updateStatus(id, status),
+      status === "cancelada" ? cancelarDemanda(id) : atualizarStatus(id, status),
     onMutate: async ({ id, status }) => {
       await qc.cancelQueries({ queryKey: KEY });
       const prev = qc.getQueryData<Demanda[]>(KEY) ?? [];

@@ -1,17 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { mockApi } from "../mocks/store";
+import { listarEnderecos, criarEndereco } from "@/services/demandaService";
+import type { EnderecoEntrega } from "../types";
 
 const KEY = ["enderecos"] as const;
 
 export function useEnderecos() {
-  return useQuery({ queryKey: KEY, queryFn: () => mockApi.listEnderecos(), staleTime: 30_000 });
+  return useQuery({ queryKey: KEY, queryFn: () => listarEnderecos(), staleTime: 30_000 });
 }
 
 export function useCreateEndereco() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (p: Parameters<typeof mockApi.createEndereco>[0]) => mockApi.createEndereco(p),
+    mutationFn: (p: Omit<EnderecoEntrega, "id" | "criado_em" | "ativo">) => criarEndereco(p),
     onSuccess: () => {
       toast.success("Endereço cadastrado");
       qc.invalidateQueries({ queryKey: KEY });
