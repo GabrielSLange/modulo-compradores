@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 
 from Data.database import SessionLocal
 from DTOs.Request.endereco_create_dto import EnderecoCreateDTO
@@ -22,6 +22,32 @@ def criar_endereco(endereco_dto: EnderecoCreateDTO, db: Session = Depends(get_db
         return EnderecoService.criar_endereco(db, endereco_dto)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao criar endereço: {str(e)}")
+
+@router.post("/demandas/enderecos", response_model=EnderecoResponseDTO, status_code=status.HTTP_201_CREATED)
+def criar_endereco_frontend(endereco_dto: EnderecoCreateDTO, db: Session = Depends(get_db)):
+    """
+    Alias compatível com o frontend (POST /api/demandas/enderecos).
+    TODO: quando JWT for implementado, extrair id_empresa do token.
+    """
+    try:
+        return EnderecoService.criar_endereco(db, endereco_dto)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao criar endereço: {str(e)}")
+
+@router.get("/demandas/enderecos", response_model=List[EnderecoResponseDTO])
+def listar_enderecos_frontend(
+    db: Session = Depends(get_db),
+    # TODO: quando JWT for implementado, filtrar por id_empresa do token.
+    id_empresa: Optional[str] = None,
+):
+    """
+    Rota compatível com o frontend (/api/demandas/enderecos).
+    Sem autenticação, retorna todos os endereços ativos.
+    """
+    try:
+        return EnderecoService.listar_enderecos_da_empresa(db, id_empresa)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao buscar endereços: {str(e)}")
 
 @router.get("/enderecos/{id_empresa}", response_model=List[EnderecoResponseDTO])
 def listar_enderecos(id_empresa: str, db: Session = Depends(get_db)):

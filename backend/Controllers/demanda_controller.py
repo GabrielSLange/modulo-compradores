@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from typing import List, Optional
+
 from Data.database import SessionLocal
 from DTOs.Request.demanda_create_dto import DemandaCreateDTO
 from DTOs.Response.demanda_response_dto import DemandaResponseDTO
 from Services.demanda_service import DemandaService
-from typing import List
 
 router = APIRouter()
 
@@ -27,7 +28,12 @@ def criar_nova_demanda(demanda_dto: DemandaCreateDTO, db: Session = Depends(get_
         raise HTTPException(status_code=500, detail=f"Erro ao criar demanda: {str(e)}")
     
 @router.get("/demandas", response_model=List[DemandaResponseDTO])
-def listar_demandas(id_empresa: str, db: Session = Depends(get_db)):
+def listar_demandas(
+    db: Session = Depends(get_db),
+    # TODO: quando o JWT for implementado, extrair id_empresa do token
+    # e remover este parâmetro opcional do query string.
+    id_empresa: Optional[str] = None,
+):
     try:
         demandas = DemandaService.listar_demandas_da_empresa(db, id_empresa)
         return demandas

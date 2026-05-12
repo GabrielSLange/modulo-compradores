@@ -14,5 +14,13 @@ export default defineConfig({
   },
   vite: {
     base: "/demandas/",
-  },
+    server: {
+      proxy: {
+        "/api": {
+          target: "http://127.0.0.1:5004",
+          rewrite: (path) => path.replace(/^\/api/, ""),
+        },
+      },
+    },
+  }
 });

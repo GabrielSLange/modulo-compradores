@@ -53,6 +53,9 @@ class DemandaService:
         return nova_demanda
     
     @staticmethod
-    def listar_demandas_da_empresa(db: Session, id_empresa: str):
-        demandas = db.query(Demanda).filter(Demanda.id_empresa_comprador == id_empresa).order_by(desc(Demanda.data_criacao)).all()
-        return demandas
+    def listar_demandas_da_empresa(db: Session, id_empresa: str | None = None):
+        # TODO: quando JWT for implementado, id_empresa sempre virá do token — remover o None.
+        query = db.query(Demanda)
+        if id_empresa:
+            query = query.filter(Demanda.id_empresa_comprador == id_empresa)
+        return query.order_by(desc(Demanda.data_criacao)).all()

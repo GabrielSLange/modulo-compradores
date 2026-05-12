@@ -23,12 +23,13 @@ class WishlistService:
         return novo_item
 
     @staticmethod
-    def listar_itens_pendentes(db: Session, id_empresa: str):
+    def listar_itens_pendentes(db: Session, id_empresa: str | None = None):
+        # TODO: quando JWT for implementado, id_empresa sempre virá do token — remover o None.
         # Traz só os itens que ainda NÃO viraram demanda
-        return db.query(WishlistItem).filter(
-            WishlistItem.id_empresa == id_empresa,
-            WishlistItem.convertido_em_demanda == False
-        ).all()
+        query = db.query(WishlistItem).filter(WishlistItem.convertido_em_demanda == False)
+        if id_empresa:
+            query = query.filter(WishlistItem.id_empresa == id_empresa)
+        return query.all()
 
     @staticmethod
     def converter_em_demanda(db: Session, id_item: str, id_usuario: str, dto: WishlistConverterDTO):

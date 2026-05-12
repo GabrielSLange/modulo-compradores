@@ -24,11 +24,12 @@ class EnderecoService:
         return novo_endereco
 
     @staticmethod
-    def listar_enderecos_da_empresa(db: Session, id_empresa: str):
-        return db.query(EnderecoEntrega).filter(
-            EnderecoEntrega.id_empresa == id_empresa,
-            EnderecoEntrega.ativo == True # Só retorna os ativos!
-        ).all()
+    def listar_enderecos_da_empresa(db: Session, id_empresa: str | None = None):
+        # TODO: quando JWT for implementado, id_empresa sempre virá do token — remover o None.
+        query = db.query(EnderecoEntrega).filter(EnderecoEntrega.ativo == True)
+        if id_empresa:
+            query = query.filter(EnderecoEntrega.id_empresa == id_empresa)
+        return query.all()
 
     @staticmethod
     def deletar_endereco_soft(db: Session, id_endereco: str, id_empresa: str):

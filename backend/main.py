@@ -1,20 +1,50 @@
+import logging
+from threading import Thread
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from Controllers import ping_controller, demanda_controller, endereco_controller, wishlist_controller
+from Controllers import ping_controller, demanda_controller, endereco_controller, wishlist_controller, produto_cache_controller
 from Jobs.recorrencia_job import iniciar_scheduler
+from Events.Consumers.produto_consumer import iniciar_consumidor_produtos
 
 # Importações para o banco de dados local
 from Data.database import engine, SQLALCHEMY_DATABASE_URL, Base
-from Models import endereco_entrega_model, demanda_model, demanda_recorrencia_model, wishlist_item_model
+from Models import (
+    endereco_entrega_model,
+    demanda_model,
+    demanda_recorrencia_model,
+    wishlist_item_model,
+    produto_cache_model,  # Registra o modelo no Base para auto-criação da tabela
+)
 
 
 from contextlib import asynccontextmanager
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("🚀 A iniciar os Jobs de background...")
     iniciar_scheduler()
+
+    # ----------------------------------------------------------------
+    # Inicia o consumidor Kafka de produtos em uma Thread daemon.
+    # daemon=True garante que a thread encerra automaticamente quando
+    # o processo principal (uvicorn) for encerrado.
+    # ----------------------------------------------------------------
+    thread_kafka_produtos = Thread(
+        target=iniciar_consumidor_produtos,
+        name="kafka-produto-consumer",
+        daemon=True,
+    )
+    thread_kafka_produtos.start()
+    print("🎧 Consumidor Kafka de Produtos iniciado em background.")
+
     yield
+    # Ao encerrar o servidor, a thread daemon é finalizada automaticamente.
 
 app = FastAPI(
     title="Módulo de Demanda - Portal B2B",
@@ -40,6 +70,7 @@ app.include_router(ping_controller.router)
 app.include_router(demanda_controller.router, tags=["Demandas"])
 app.include_router(endereco_controller.router, tags=["Endereços"])
 app.include_router(wishlist_controller.router, tags=["Wishlist"])
+app.include_router(produto_cache_controller.router, tags=["Produtos (Cache Kafka)"])
 
 if __name__ == "__main__":
     import uvicorn
