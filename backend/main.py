@@ -27,7 +27,7 @@ logging.basicConfig(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("🚀 A iniciar os Jobs de background...")
+    print("[INFO] A iniciar os Jobs de background...")
     iniciar_scheduler()
 
     # ----------------------------------------------------------------
@@ -41,7 +41,7 @@ async def lifespan(app: FastAPI):
         daemon=True,
     )
     thread_kafka_produtos.start()
-    print("🎧 Consumidor Kafka de Produtos iniciado em background.")
+    print("[INFO] Consumidor Kafka de Produtos iniciado em background.")
 
     yield
     # Ao encerrar o servidor, a thread daemon é finalizada automaticamente.
@@ -64,7 +64,7 @@ app.add_middleware(
 # Gatilho de desenvolvimento: Cria as tabelas SÓ se for SQLite (Testes Locais)
 if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):
     Base.metadata.create_all(bind=engine)
-    print("📦 Banco SQLite local criado para testes!")
+    print("[OK] Banco SQLite local criado para testes!")
 
 app.include_router(ping_controller.router)
 app.include_router(demanda_controller.router, tags=["Demandas"])

@@ -24,23 +24,12 @@ def adicionar_na_wishlist(dto: WishlistCreateDTO, db: Session = Depends(get_db))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao adicionar na wishlist: {str(e)}")
 
-@router.get("/demandas/wishlist", response_model=List[WishlistResponseDTO])
-def listar_wishlist_frontend(
+@router.get("/wishlist", response_model=List[WishlistResponseDTO])
+def listar_wishlist(
     db: Session = Depends(get_db),
     # TODO: quando JWT for implementado, filtrar por id_empresa do token.
     id_empresa: Optional[str] = None,
 ):
-    """
-    Rota compatível com o frontend (/api/demandas/wishlist).
-    Sem autenticação, retorna todos os itens pendentes.
-    """
-    try:
-        return WishlistService.listar_itens_pendentes(db, id_empresa)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao buscar wishlist: {str(e)}")
-
-@router.get("/wishlist/{id_empresa}", response_model=List[WishlistResponseDTO])
-def listar_wishlist(id_empresa: str, db: Session = Depends(get_db)):
     try:
         return WishlistService.listar_itens_pendentes(db, id_empresa)
     except Exception as e:

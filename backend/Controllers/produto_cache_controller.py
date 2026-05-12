@@ -39,7 +39,7 @@ class ProdutoProjecaoDTO(BaseModel):
 
 
 @router.get(
-    "/demandas/produtos/projecao/{id_produto}",
+    "/produtos/projecao/{id_produto}",
     response_model=ProdutoProjecaoDTO,
 )
 def get_produto_projecao(id_produto: str, db: Session = Depends(get_db)):
