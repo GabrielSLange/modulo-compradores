@@ -59,18 +59,26 @@ graph TD
     class DB db;
 ```
 
+## 🛠️ Stack Tecnológica
+
+- **Backend:** Python 3.10+, FastAPI, SQLAlchemy, Pydantic v2
+- **Frontend:** React, Vite, TypeScript, TailwindCSS, TanStack Query
+- **Banco de Dados:** SQLite (Desenvolvimento) / PostgreSQL (Produção - Previsto)
+- **Mensageria:** Apache Kafka (via `confluent-kafka` e Redpanda)
+- **Agendamento (Jobs):** APScheduler (para demandas recorrentes)
+
 ---
 
 ## 🔗 Integração Kafka (Mensageria)
 
-O módulo atua como **Consumidor** para manter uma projeção local (cache) dos produtos. Isso garante que a API de demandas continue funcionando mesmo se o microsserviço de Catálogo estiver fora do ar.
+O módulo atua tanto como **Consumidor** (para espelhar dados externos) quanto como **Produtor** (para notificar outras equipes sobre intenções de compra).
 
-### Tópico Consumido
-- **Nome:** `sdi.produto.events`
-- **Broker:** `localhost:9092` (Configurável via `KAFKA_BOOTSTRAP_SERVERS`)
-- **Ação:** Criação ou atualização na tabela `produto_cache`.
+### 📥 Consumidor (Eventos Recebidos)
 
-### Payload Esperado (Envelope Padrão)
+O módulo escuta eventos de produtos para manter um cache local, garantindo resiliência.
+- **Tópico:** `sdi.produto.events`
+- **Ação:** Cria/atualiza registros na tabela `produto_cache`.
+- **Payload Esperado:**
 ```json
 {
   "eventId": "uuid-do-evento",
@@ -84,6 +92,79 @@ O módulo atua como **Consumidor** para manter uma projeção local (cache) dos 
   }
 }
 ```
+
+### 📤 Produtor (Eventos Publicados)
+
+O módulo notifica o ecossistema sempre que uma nova demanda de compra surge (seja manualmente ou via agendamento). A chave (Key) da mensagem no Kafka é sempre o `id_demanda`.
+
+#### Evento: Demanda Criada Manualmente
+- **Tópico:** `demanda_criada`
+- **Gatilho:** Quando o comprador cria uma demanda pelo Frontend ou converte um item da Wishlist.
+- **Envelope do Evento:**
+```json
+{
+  "eventId": "uuid-do-evento",
+  "eventType": "demanda_criada",
+  "eventVersion": "1.0",
+  "timestamp": "2023-10-27T10:00:00Z",
+  "source": "modulo-compradores",
+  "correlationId": "uuid-da-demanda",
+  "payload": {
+    "id_demanda": "uuid-da-demanda",
+    "id_produto": "uuid-do-produto",
+    "quantidade_desejada": 10,
+    // ... demais dados da demanda
+  }
+}
+```
+
+#### Evento: Demanda Recorrente Gerada (Job)
+- **Tópico:** `demanda_recorrente_gerada`
+- **Gatilho:** Quando o *APScheduler* roda em background e cria automaticamente uma demanda baseada em uma assinatura/recorrência.
+- **Envelope do Evento:** Formato idêntico ao `demanda_criada`, mudando apenas o `eventType` para `demanda_recorrente_gerada`.
+```json
+{
+  "eventId": "uuid-do-evento",
+  "eventType": "ProdutoCriado", // ou ProdutoAtualizado
+  "timestamp": "2023-10-27T10:00:00Z",
+  "data": {
+    "id": "uuid-do-produto",
+    "codigo": "NOTE-001",
+    "nome": "Notebook XYZ",
+    "ativo": true
+  }
+}
+```
+
+### 📤 Produtor (Eventos Publicados)
+
+O módulo notifica o ecossistema sempre que uma nova demanda de compra surge (seja manualmente ou via agendamento). A chave (Key) da mensagem no Kafka é sempre o `id_demanda`.
+
+#### Evento: Demanda Criada Manualmente
+- **Tópico:** `demanda_criada`
+- **Gatilho:** Quando o comprador cria uma demanda pelo Frontend ou converte um item da Wishlist.
+- **Envelope do Evento:**
+```json
+{
+  "eventId": "uuid-do-evento",
+  "eventType": "demanda_criada",
+  "eventVersion": "1.0",
+  "timestamp": "2023-10-27T10:00:00Z",
+  "source": "modulo-compradores",
+  "correlationId": "uuid-da-demanda",
+  "payload": {
+    "id_demanda": "uuid-da-demanda",
+    "id_produto": "uuid-do-produto",
+    "quantidade_desejada": 10,
+    // ... demais dados da demanda
+  }
+}
+```
+
+#### Evento: Demanda Recorrente Gerada (Job)
+- **Tópico:** `demanda_recorrente_gerada`
+- **Gatilho:** Quando o *APScheduler* roda em background e cria automaticamente uma demanda baseada em uma assinatura/recorrência.
+- **Envelope do Evento:** Formato idêntico ao `demanda_criada`, mudando apenas o `eventType` para `demanda_recorrente_gerada`.
 
 ---
 
