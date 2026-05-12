@@ -49,7 +49,7 @@ src/
 │   │   ├── useEnderecos.ts         # query + create
 │   │   └── useProduto.ts           # leitura da projeção local
 │   ├── mocks/
-│   │   └── store.ts                # API simulada + tick do Matching Engine (TEMPORÁRIO)
+│   │   └── store.ts                # API simulada + tick do Matching Engine
 │   └── types.ts                    # Tipos do domínio (espelham o DBML)
 ├── routes/
 │   ├── __root.tsx                  # Shell + QueryClientProvider
