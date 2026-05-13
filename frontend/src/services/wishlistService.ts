@@ -15,8 +15,12 @@ export async function adicionarWishlist(payload: AdicionarWishlistPayload): Prom
   return await api.post<WishlistItem>("/api/demandas/wishlist", data);
 }
 
-export async function converterWishlist(id: string, id_endereco_destino: string): Promise<Demanda> {
-  return await api.post<Demanda>(`/api/demandas/wishlist/${id}/converter`, {
-    id_endereco_destino,
-  });
+export type ConverterWishlistPayload = {
+  id_endereco_destino: string;
+  quantidade_desejada: number;
+  prioridade: "baixa" | "media" | "alta";
+};
+
+export async function converterWishlist(id: string, payload: ConverterWishlistPayload): Promise<Demanda> {
+  return await api.post<Demanda>(`/api/demandas/wishlist/${id}/converter?id_usuario=${MOCK_USUARIO_ID}`, payload);
 }

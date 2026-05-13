@@ -17,7 +17,7 @@ interface Props {
 
 export function VisualizarDemandaDialog({ demanda }: Props) {
   const { data: enderecos } = useEnderecos();
-  const endereco = enderecos?.find((e) => e.id === demanda.id_endereco_destino);
+  const endereco = enderecos?.find((e) => e.id === demanda.id_endereco_entrega);
 
   return (
     <Dialog>
@@ -89,7 +89,7 @@ export function VisualizarDemandaDialog({ demanda }: Props) {
                   </span>
                 </>
               ) : (
-                <span className="text-sm text-muted-foreground">ID: {demanda.id_endereco_destino} (Não encontrado)</span>
+                <span className="text-sm text-muted-foreground">ID: {demanda.id_endereco_entrega} (Não encontrado)</span>
               )}
             </div>
           </div>

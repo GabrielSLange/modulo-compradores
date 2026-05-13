@@ -10,7 +10,9 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 
+import { toast } from "sonner";
 import { useDemandas, useUpdateStatus } from "../hooks/useDemandas";
+import { useProdutos } from "@/features/produtos/hooks/useProduto";
 import { ProdutoCell } from "@/features/produtos/components/ProdutoCell";
 import { StatusBadge } from "./StatusBadge";
 import { NovaDemandaDialog } from "./NovaDemandaDialog";
@@ -19,6 +21,7 @@ import type { DemandaStatus } from "@/features/types";
 
 export function DemandasTab() {
   const { data: demandas, isLoading, refetch, isFetching } = useDemandas();
+  const { data: produtos } = useProdutos();
   const updateStatus = useUpdateStatus();
   const [busca, setBusca] = useState("");
   const [statusFilter, setStatusFilter] = useState<"todas" | DemandaStatus>("todas");
@@ -26,10 +29,15 @@ export function DemandasTab() {
   const lista = useMemo(() => {
     return (demandas ?? []).filter((d) => {
       if (statusFilter !== "todas" && d.status !== statusFilter) return false;
-      if (busca && !d.id.toLowerCase().includes(busca.toLowerCase())) return false;
+      if (busca) {
+        const idMatch = d.id.toLowerCase().includes(busca.toLowerCase());
+        const prod = produtos?.find((p) => p.id === d.id_produto);
+        const prodMatch = prod && (prod.nome.toLowerCase().includes(busca.toLowerCase()) || (prod.codigo && prod.codigo.toLowerCase().includes(busca.toLowerCase())));
+        if (!idMatch && !prodMatch) return false;
+      }
       return true;
     });
-  }, [demandas, busca, statusFilter]);
+  }, [demandas, busca, statusFilter, produtos]);
 
   return (
     <section className="space-y-4">
@@ -49,7 +57,7 @@ export function DemandasTab() {
             <Input
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              placeholder="Buscar por ID..."
+              placeholder="Buscar por ID ou Produto..."
               className="pl-9 bg-background"
             />
           </div>
@@ -63,7 +71,7 @@ export function DemandasTab() {
               <SelectItem value="cancelada">Cancelada</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" size="icon" onClick={() => refetch()} aria-label="Atualizar">
+          <Button variant="outline" size="icon" onClick={() => { refetch(); toast.info("Atualizando demandas..."); }} aria-label="Atualizar">
             <RefreshCw className={isFetching ? "animate-spin" : ""} />
           </Button>
         </div>

@@ -14,7 +14,13 @@ export type CriarDemandaPayload = Omit<
 >;
 
 export async function criarDemanda(payload: CriarDemandaPayload): Promise<Demanda> {
-  const data = { ...payload, id_usuario_criador: MOCK_USUARIO_ID, id_empresa_comprador: MOCK_EMPRESA_ID };
+  const { id_endereco_entrega, ...rest } = payload;
+  const data = {
+    ...rest,
+    id_endereco_destino: id_endereco_entrega, // backend usa id_endereco_destino
+    id_usuario_criador: MOCK_USUARIO_ID,
+    id_empresa_comprador: MOCK_EMPRESA_ID,
+  };
   return await api.post<Demanda>("/api/demandas", data);
 }
 

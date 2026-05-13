@@ -63,15 +63,16 @@ export function EnderecoDialog({ endereco, trigger }: Props) {
     }
   }, [open, endereco, form]);
 
-  const onSubmit = form.handleSubmit((v) => {
-    if (endereco) {
-      update.mutate({ id: endereco.id, payload: v }, {
-        onSuccess: () => setOpen(false)
-      });
-    } else {
-      create.mutate(v, {
-        onSuccess: () => setOpen(false)
-      });
+  const onSubmit = form.handleSubmit(async (v) => {
+    try {
+      if (endereco) {
+        await update.mutateAsync({ id: endereco.id, payload: v });
+      } else {
+        await create.mutateAsync(v);
+      }
+      setOpen(false);
+    } catch (error) {
+      console.error(error);
     }
   });
 

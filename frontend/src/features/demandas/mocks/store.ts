@@ -38,7 +38,7 @@ const enderecos: EnderecoEntrega[] = [
 const demandas: Demanda[] = [
   {
     id: uid(), id_usuario_criador: "u-1", id_empresa_comprador: "emp-1",
-    id_produto: "p-1", id_endereco_destino: "e-1",
+    id_produto: "p-1", id_endereco_entrega: "e-1",
     quantidade_desejada: 10, observacao: "Entrega em horário comercial.",
     prioridade: "media",
     status: "aberta", is_recorrente: false,
@@ -46,7 +46,7 @@ const demandas: Demanda[] = [
   },
   {
     id: uid(), id_usuario_criador: "u-1", id_empresa_comprador: "emp-1",
-    id_produto: "p-2", id_endereco_destino: "e-2",
+    id_produto: "p-2", id_endereco_entrega: "e-2",
     quantidade_desejada: 4, status: "em_negociacao", is_recorrente: false,
     prioridade: "baixa",
     criado_em: now(), atualizado_em: now(),
@@ -54,7 +54,7 @@ const demandas: Demanda[] = [
   {
     id: uid(), id_usuario_criador: "u-1", id_empresa_comprador: "emp-1",
     id_produto: "p-99", // produto NÃO sincronizado — fallback
-    id_endereco_destino: "e-1",
+    id_endereco_entrega: "e-1",
     quantidade_desejada: 25, status: "aberta", is_recorrente: true,
     prioridade: "alta",
     recorrencia: { frequencia: "mensal", data_inicio: now(), dia_preferencial: 5 },
@@ -138,7 +138,7 @@ export const mockApi = {
     wishlist.unshift(novo);
     return novo;
   },
-  async convertWishlist(id: string, id_endereco_destino: string): Promise<Demanda> {
+  async convertWishlist(id: string, id_endereco_entrega: string): Promise<Demanda> {
     await delay(600);
     const w = wishlist.find((x) => x.id === id);
     if (!w) throw new Error("Item de wishlist não encontrado.");
@@ -146,7 +146,7 @@ export const mockApi = {
       id_usuario_criador: w.id_usuario,
       id_empresa_comprador: w.id_empresa,
       id_produto: w.id_produto,
-      id_endereco_destino: id_endereco_destino,
+      id_endereco_entrega: id_endereco_entrega,
       quantidade_desejada: w.quantidade_desejada,
       prioridade: "media",
       observacao: w.observacao,

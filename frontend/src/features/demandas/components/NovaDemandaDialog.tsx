@@ -26,7 +26,7 @@ import type { RecorrenciaFrequencia } from "@/features/types";
 const schema = z
   .object({
     id_produto: z.string().min(1, "Selecione um produto"),
-    id_endereco_destino: z.string().min(1, "Selecione um endereço"),
+    id_endereco_entrega: z.string().min(1, "Selecione um endereço"),
     quantidade_desejada: z.coerce.number().int().positive("Mín. 1"),
     prioridade: z.enum(["baixa", "media", "alta"]),
     preco_maximo: z.coerce.number().optional(),
@@ -54,15 +54,17 @@ export function NovaDemandaDialog() {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { is_recorrente: false, quantidade_desejada: 1, prioridade: "media" },
+    defaultValues: { is_recorrente: false, quantidade_desejada: 1, prioridade: "media", id_produto: "", id_endereco_entrega: "", observacao: "" },
   });
 
   const isRec = form.watch("is_recorrente");
 
+  const RESET_VALUES = { is_recorrente: false, quantidade_desejada: 1, prioridade: "media" as const, id_produto: "", id_endereco_entrega: "", observacao: "", frequencia: undefined, data_inicio: "", data_fim: "", dia_preferencial: undefined };
+
   const onSubmit = form.handleSubmit((v) => {
     create.mutate({
       id_produto: v.id_produto,
-      id_endereco_destino: v.id_endereco_destino,
+      id_endereco_entrega: v.id_endereco_entrega,
       quantidade_desejada: v.quantidade_desejada,
       prioridade: v.prioridade,
       preco_maximo: v.preco_maximo,
@@ -78,14 +80,14 @@ export function NovaDemandaDialog() {
         : undefined,
     }, {
       onSuccess: () => {
-        form.reset({ is_recorrente: false, quantidade_desejada: 1, prioridade: "media" });
+        form.reset(RESET_VALUES);
         setOpen(false);
-      }
+      },
     });
   });
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) { form.reset(RESET_VALUES); } setOpen(o); }}>
       <DialogTrigger asChild>
         <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
           <Plus className="size-4" /> Nova demanda
@@ -121,8 +123,8 @@ export function NovaDemandaDialog() {
           <div className="col-span-2 sm:col-span-1 space-y-1.5">
             <Label>Endereço de entrega *</Label>
             <AsyncSelect
-              value={form.watch("id_endereco_destino")}
-              onValueChange={(v) => form.setValue("id_endereco_destino", v, { shouldValidate: true })}
+              value={form.watch("id_endereco_entrega")}
+              onValueChange={(v) => form.setValue("id_endereco_entrega", v, { shouldValidate: true })}
               isLoading={isLoadingEnderecos}
               isError={isErrorEnderecos}
               options={enderecos?.map((e) => ({ value: e.id, label: `${e.apelido} — ${e.cidade}/${e.uf}` }))}
@@ -131,8 +133,8 @@ export function NovaDemandaDialog() {
               errorMessage="Erro ao carregar endereços"
               emptyMessage="Nenhum endereço cadastrado"
             />
-            {form.formState.errors.id_endereco_destino && (
-              <p className="text-xs text-destructive">{form.formState.errors.id_endereco_destino.message}</p>
+            {form.formState.errors.id_endereco_entrega && (
+              <p className="text-xs text-destructive">{form.formState.errors.id_endereco_entrega.message}</p>
             )}
           </div>
 

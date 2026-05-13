@@ -38,10 +38,10 @@ export function WishlistTab() {
   const add = useAddWishlist();
   const convert = useConvertWishlist();
   const [open, setOpen] = useState(false);
-  const [convertId, setConvertId] = useState<string | null>(null);
+  const [convertItem, setConvertItem] = useState<{ id: string; quantidade_desejada: number } | null>(null);
   const [endereco, setEndereco] = useState<string>("");
 
-  const form = useForm<Form>({ resolver: zodResolver(schema), defaultValues: { quantidade_desejada: 1 } });
+  const form = useForm<Form>({ resolver: zodResolver(schema), defaultValues: { quantidade_desejada: 1, id_produto: "", observacao: "" } });
 
   return (
     <section className="space-y-4">
@@ -52,7 +52,7 @@ export function WishlistTab() {
             Intenções informais de compra. Podem ser convertidas em demanda quando confirmadas.
           </p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(o) => { if (!o) form.reset({ quantidade_desejada: 1, id_produto: "", observacao: "" }); setOpen(o); }}>
           <DialogTrigger asChild>
             <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
               <Plus className="size-4" /> Adicionar à wishlist
@@ -67,7 +67,7 @@ export function WishlistTab() {
                   quantidade_desejada: v.quantidade_desejada,
                   observacao: v.observacao,
                 });
-                form.reset({ quantidade_desejada: 1 });
+                form.reset({ quantidade_desejada: 1, id_produto: "", observacao: "" });
                 setOpen(false);
               })}
               className="space-y-3"
@@ -148,7 +148,7 @@ export function WishlistTab() {
                       size="sm"
                       variant="ghost"
                       className="text-secondary hover:bg-secondary/10 hover:text-secondary"
-                      onClick={() => { setConvertId(w.id); setEndereco(""); }}
+                      onClick={() => { setConvertItem({ id: w.id, quantidade_desejada: w.quantidade_desejada }); setEndereco(""); }}
                     >
                       <ArrowRightCircle className="size-4" /> Converter
                     </Button>
@@ -160,7 +160,7 @@ export function WishlistTab() {
         </Table>
       </div>
 
-      <Dialog open={!!convertId} onOpenChange={(o) => !o && setConvertId(null)}>
+      <Dialog open={!!convertItem} onOpenChange={(o) => { if (!o) { setConvertItem(null); setEndereco(""); } }}>
         <DialogContent aria-describedby={undefined}>
           <DialogHeader><DialogTitle>Converter em demanda</DialogTitle></DialogHeader>
           <div className="space-y-3">
@@ -180,14 +180,21 @@ export function WishlistTab() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setConvertId(null)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => setConvertItem(null)}>Cancelar</Button>
             <Button
               disabled={!endereco || convert.isPending}
               className="bg-secondary text-secondary-foreground hover:bg-secondary/90"
               onClick={async () => {
-                if (!convertId || !endereco) return;
-                await convert.mutateAsync({ id: convertId, id_endereco_destino: endereco });
-                setConvertId(null);
+                if (!convertItem || !endereco) return;
+                await convert.mutateAsync({
+                  id: convertItem.id,
+                  payload: {
+                    id_endereco_destino: endereco,
+                    quantidade_desejada: convertItem.quantidade_desejada,
+                    prioridade: "media"
+                  }
+                });
+                setConvertItem(null);
               }}
             >
               {convert.isPending ? "Convertendo..." : "Confirmar"}

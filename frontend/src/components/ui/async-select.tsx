@@ -37,9 +37,12 @@ export function AsyncSelect({
   errorMessage = "Erro ao carregar",
   emptyMessage = "Nenhum item encontrado",
 }: AsyncSelectProps) {
+  // Usando `key` igual ao value garante que o componente remonta quando
+  // o formulário é resetado para "", evitando o warning controlled/uncontrolled.
   return (
     <Select
-      value={value}
+      key={value || "__empty__"}
+      value={value || undefined}
       onValueChange={onValueChange}
       disabled={disabled || isLoading || isError}
     >
