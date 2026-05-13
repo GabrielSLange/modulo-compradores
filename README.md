@@ -32,7 +32,7 @@ cd meu-modulo-distribuido
    .\\venv\\Scripts\\activate
 
 4. Instale as dependencias necessarias:
-   pip install fastapi uvicorn pydantic
+   pip install fastapi uvicorn pydantic sqlalchemy confluent_kafka apscheduler
 
 5. Execute a API:
    python main.py

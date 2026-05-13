@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getProdutoProjecao, listarProdutosProjecao } from "@/services/demandaService";
+import { getProdutoProjecao, listarProdutos } from "@/services/demandaService";
 
 /**
  * Hook para buscar a lista de projeções de produtos.
@@ -7,9 +7,9 @@ import { getProdutoProjecao, listarProdutosProjecao } from "@/services/demandaSe
  */
 export function useProdutos() {
   return useQuery({
-    queryKey: ["produtos-projecao"],
-    queryFn: listarProdutosProjecao,
-    staleTime: 1000 * 60 * 5, // Cache de 5 minutos para produtos
+    queryKey: ["produtos"],
+    queryFn: listarProdutos,
+    staleTime: 1000 * 60 * 5,
   });
 }
 

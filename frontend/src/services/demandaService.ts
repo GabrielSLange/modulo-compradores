@@ -42,8 +42,6 @@ export async function listarEnderecos(): Promise<EnderecoEntrega[]> {
 }
 
 export type CriarEnderecoPayload = Omit<EnderecoEntrega, "id" | "criado_em" | "ativo" | "numero"> & {
-  // O campo 'numero' é opcional no formulário, então deve ser opcional no payload da API.
-  // A API deve ser capaz de lidar com a ausência deste campo.
   numero?: string;
 };
 
@@ -74,10 +72,19 @@ export async function converterWishlist(
 
 // ----------------------------------------- Produtos (projeção via Kafka)
 
-export async function listarProdutosProjecao(): Promise<ProdutoProjecao[]> {
-  // NOTA: Endpoint não documentado, mas necessário para os dropdowns.
-  // Assumindo que a API o fornecerá em /api/demandas/produtos/projecao.
-  return await api.get<ProdutoProjecao[]>("/api/demandas/produtos/projecao");
+export type Produto = {
+  id: string;
+  nome: string;
+  codigo?: string;
+};
+
+export async function listarProdutos(): Promise<Produto[]> {
+  try {
+    return await api.get<Produto[]>("/api/produtos");
+  } catch (error) {
+    console.warn("[Produtos] Falha ao buscar produtos", error);
+    return []; // IMPORTANTE: não quebra UI
+  }
 }
 
 export async function getProdutoProjecao(id: string): Promise<ProdutoProjecao | string> {
