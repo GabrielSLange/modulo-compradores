@@ -9,6 +9,7 @@ class EnderecoEntrega(Base):
 
     id_endereco = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     id_empresa = Column(String, nullable=False)
+    apelido = Column(String(50), nullable=True)
     logradouro = Column(String(200), nullable=False)
     numero = Column(String(20), nullable=True)
     complemento = Column(String(100), nullable=True)

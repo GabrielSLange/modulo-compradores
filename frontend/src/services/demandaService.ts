@@ -49,6 +49,14 @@ export async function criarEndereco(payload: CriarEnderecoPayload): Promise<Ende
   return await api.post<EnderecoEntrega>("/api/demandas/enderecos", payload);
 }
 
+export async function atualizarEndereco(id: string, payload: CriarEnderecoPayload): Promise<EnderecoEntrega> {
+  return await api.put<EnderecoEntrega>(`/api/demandas/enderecos/${id}`, payload);
+}
+
+export async function excluirEndereco(id: string, id_empresa: string): Promise<void> {
+  return await api.delete(`/api/demandas/enderecos/${id}?id_empresa=${id_empresa}`);
+}
+
 // ------------------------------------------------------------------ Wishlist
 
 export async function listarWishlist(): Promise<WishlistItem[]> {
@@ -76,6 +84,8 @@ export type Produto = {
   id: string;
   nome: string;
   codigo?: string;
+  categoria?: string;
+  unidade?: string;
 };
 
 export async function getProdutos(): Promise<Produto[]>;

@@ -6,12 +6,13 @@ class EnderecoResponseDTO(BaseModel):
     # validation_alias: lê model.id_endereco e serializa como "id"
     id: str = Field(validation_alias="id_endereco")
     id_empresa: str
+    apelido: Optional[str] = None
     logradouro: str
     numero: Optional[str] = None
     complemento: Optional[str] = None
     bairro: Optional[str] = None
     cidade: str
-    estado: str
+    uf: str = Field(validation_alias="estado")
     cep: str
     ativo: bool
     criado_em: Optional[datetime] = None  # coluna já se chama criado_em no model

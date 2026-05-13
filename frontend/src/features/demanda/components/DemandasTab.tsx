@@ -14,6 +14,7 @@ import { useDemandas, useUpdateStatus } from "../hooks/useDemandas";
 import { ProdutoCell } from "./ProdutoCell";
 import { StatusBadge } from "./StatusBadge";
 import { NovaDemandaDialog } from "./NovaDemandaDialog";
+import { VisualizarDemandaDialog } from "./VisualizarDemandaDialog";
 import type { DemandaStatus } from "../types";
 
 export function DemandasTab() {
@@ -116,7 +117,7 @@ export function DemandasTab() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
-                      <Button size="icon" variant="ghost" title="Detalhes"><Eye className="size-4" /></Button>
+                      <VisualizarDemandaDialog demanda={d} />
                       {d.status !== "cancelada" && d.status !== "atendida" && (
                         <Button
                           size="icon"

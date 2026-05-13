@@ -34,6 +34,18 @@ def listar_enderecos(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao buscar endereços: {str(e)}")
 
+@router.put("/enderecos/{id_endereco}", response_model=EnderecoResponseDTO)
+def atualizar_endereco(id_endereco: str, endereco_dto: EnderecoCreateDTO, db: Session = Depends(get_db)):
+    try:
+        endereco = EnderecoService.atualizar_endereco(db, id_endereco, endereco_dto)
+        if not endereco:
+            raise HTTPException(status_code=404, detail="Endereço não encontrado ou não pertence a esta empresa.")
+        return endereco
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao atualizar endereço: {str(e)}")
+
 @router.delete("/enderecos/{id_endereco}", status_code=status.HTTP_204_NO_CONTENT)
 def deletar_endereco(id_endereco: str, id_empresa: str, db: Session = Depends(get_db)):
     """

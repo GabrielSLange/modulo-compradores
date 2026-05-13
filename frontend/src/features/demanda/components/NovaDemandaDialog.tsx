@@ -58,8 +58,8 @@ export function NovaDemandaDialog() {
 
   const isRec = form.watch("is_recorrente");
 
-  const onSubmit = form.handleSubmit(async (v) => {
-    await create.mutateAsync({
+  const onSubmit = form.handleSubmit((v) => {
+    create.mutate({
       id_usuario_criador: "u-1",          // mock JWT
       id_empresa_comprador: "emp-1",      // mock JWT
       id_produto: v.id_produto,
@@ -77,9 +77,12 @@ export function NovaDemandaDialog() {
             dia_preferencial: v.dia_preferencial!,
           }
         : undefined,
+    }, {
+      onSuccess: () => {
+        form.reset({ is_recorrente: false, quantidade_desejada: 1, prioridade: "media" });
+        setOpen(false);
+      }
     });
-    form.reset({ is_recorrente: false, quantidade_desejada: 1, prioridade: "media" });
-    setOpen(false);
   });
 
   return (

@@ -59,3 +59,25 @@ class DemandaService:
         if id_empresa:
             query = query.filter(Demanda.id_empresa_comprador == id_empresa)
         return query.order_by(desc(Demanda.data_criacao)).all()
+
+    @staticmethod
+    def atualizar_status(db: Session, id_demanda: str, novo_status: str):
+        demanda = db.query(Demanda).filter(Demanda.id_demanda == id_demanda).first()
+        if not demanda:
+            raise ValueError(f"Demanda {id_demanda} não encontrada.")
+        
+        demanda.status = novo_status
+        db.commit()
+        db.refresh(demanda)
+        
+        # Emite evento se for cancelada
+        if novo_status == "cancelada":
+            payload_evento = {
+                "id_empresa_comprador": demanda.id_empresa_comprador,
+                "id_produto": demanda.id_produto,
+                "status": "cancelada"
+            }
+            # Aqui no futuro chamaremos algo como DemandaProducer.publicar_demanda_cancelada
+            pass
+            
+        return demanda

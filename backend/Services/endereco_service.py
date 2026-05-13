@@ -7,6 +7,7 @@ class EnderecoService:
     def criar_endereco(db: Session, dto: EnderecoCreateDTO):
         novo_endereco = EnderecoEntrega(
             id_empresa=dto.id_empresa,
+            apelido=dto.apelido,
             logradouro=dto.logradouro,
             numero=dto.numero,
             complemento=dto.complemento,
@@ -24,9 +25,35 @@ class EnderecoService:
         return novo_endereco
 
     @staticmethod
+    def atualizar_endereco(db: Session, id_endereco: str, dto: EnderecoCreateDTO):
+        endereco = db.query(EnderecoEntrega).filter(
+            EnderecoEntrega.id_endereco == id_endereco,
+            EnderecoEntrega.id_empresa == dto.id_empresa,
+            EnderecoEntrega.ativo.is_(True)
+        ).first()
+
+        if not endereco:
+            return None
+
+        endereco.apelido = dto.apelido
+        endereco.logradouro = dto.logradouro
+        endereco.numero = dto.numero
+        endereco.complemento = dto.complemento
+        endereco.bairro = dto.bairro
+        endereco.cidade = dto.cidade
+        endereco.estado = dto.estado
+        endereco.cep = dto.cep
+        endereco.latitude = dto.latitude
+        endereco.longitude = dto.longitude
+
+        db.commit()
+        db.refresh(endereco)
+        return endereco
+
+    @staticmethod
     def listar_enderecos_da_empresa(db: Session, id_empresa: str | None = None):
         # TODO: quando JWT for implementado, id_empresa sempre virá do token — remover o None.
-        query = db.query(EnderecoEntrega).filter(EnderecoEntrega.ativo == True)
+        query = db.query(EnderecoEntrega).filter(EnderecoEntrega.ativo.is_(True))
         if id_empresa:
             query = query.filter(EnderecoEntrega.id_empresa == id_empresa)
         return query.all()
