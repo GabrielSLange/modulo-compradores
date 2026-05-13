@@ -18,12 +18,14 @@ export function ProdutoCell({ id }: { id: string }) {
     );
   }
 
-  if (!data) {
+  if (!data || typeof data === "string") {
     return (
       <div className="flex items-start gap-2 text-muted-foreground">
         <AlertCircle className="mt-0.5 size-4 text-warning" />
         <div className="leading-tight">
-          <div className="text-sm font-medium text-foreground">Produto não identificado</div>
+          <div className="text-sm font-medium text-foreground">
+            {typeof data === "string" ? data : "Produto não identificado"}
+          </div>
           <div className="text-xs">
             <span className="font-mono">{id}</span> — aguardando sincronização
           </div>

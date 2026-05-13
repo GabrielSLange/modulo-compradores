@@ -73,14 +73,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
+      { title: "Catálogo de Demandas - SDI" },
+      { name: "description", content: "Tela para cadastro e visualização de Demandas" },
+      { name: "author", content: "Equipe 4" },
+      { property: "og:title", content: "Catálogo de Demandas - SDI" },
+      { property: "og:description", content: "Tela para cadastro e visualização de Demandas" },
+      { property: "og:type", content: "website" }
     ],
     links: [
       {

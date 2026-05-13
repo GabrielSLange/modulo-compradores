@@ -4,7 +4,6 @@ import { Plus, MapPin } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,7 +48,7 @@ export function EnderecosTab() {
               <Plus className="size-4" /> Novo endereço
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-xl">
+          <DialogContent className="max-w-xl" aria-describedby={undefined}>
             <DialogHeader><DialogTitle>Novo endereço</DialogTitle></DialogHeader>
             <form
               onSubmit={form.handleSubmit(async (v) => {
@@ -91,7 +90,13 @@ export function EnderecosTab() {
           <TableBody>
             {isLoading ? (
               <TableRow><TableCell colSpan={5}><Skeleton className="h-10 w-full" /></TableCell></TableRow>
-            ) : enderecos!.map((e) => (
+            ) : (enderecos ?? []).length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
+                  Nenhum endereço encontrado.
+                </TableCell>
+              </TableRow>
+            ) : (enderecos ?? []).map((e) => (
               <TableRow key={e.id} className="hover:bg-accent/40">
                 <TableCell className="font-semibold">
                   <span className="inline-flex items-center gap-2"><MapPin className="size-4 text-primary" />{e.apelido}</span>

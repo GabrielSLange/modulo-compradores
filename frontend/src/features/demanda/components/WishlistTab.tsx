@@ -56,7 +56,7 @@ export function WishlistTab() {
               <Plus className="size-4" /> Adicionar à wishlist
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent aria-describedby={undefined}>
             <DialogHeader><DialogTitle>Novo item</DialogTitle></DialogHeader>
             <form
               onSubmit={form.handleSubmit(async (v) => {
@@ -158,7 +158,7 @@ export function WishlistTab() {
       </div>
 
       <Dialog open={!!convertId} onOpenChange={(o) => !o && setConvertId(null)}>
-        <DialogContent>
+        <DialogContent aria-describedby={undefined}>
           <DialogHeader><DialogTitle>Converter em demanda</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1.5">
