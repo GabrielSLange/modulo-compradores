@@ -78,12 +78,26 @@ export type Produto = {
   codigo?: string;
 };
 
-export async function listarProdutos(): Promise<Produto[]> {
-  try {
-    return await api.get<Produto[]>("/api/produtos");
-  } catch (error) {
-    console.warn("[Produtos] Falha ao buscar produtos", error);
-    return []; // IMPORTANTE: não quebra UI
+export async function getProdutos(): Promise<Produto[]>;
+export async function getProdutos(id: string): Promise<Produto>;
+export async function getProdutos(id?: string): Promise<Produto | Produto[]> {
+  if (id) {
+    // Busca um produto específico
+    try {
+      return await api.get<Produto>(`/api/produtos/${id}`);
+    } catch (error) {
+      console.error(`[Produtos] Falha ao buscar produto com id ${id}`, error);
+      // Re-lança o erro para que o chamador (ex: TanStack Query) possa tratá-lo
+      throw error;
+    }
+  } else {
+    // Lista todos os produtos
+    try {
+      return await api.get<Produto[]>("/api/produtos");
+    } catch (error) {
+      console.warn("[Produtos] Falha ao buscar produtos", error);
+      return []; // IMPORTANTE: não quebra UI em listagens
+    }
   }
 }
 
