@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from Controllers import ping_controller, demanda_controller, endereco_controller, wishlist_controller, produto_cache_controller
 from Jobs.recorrencia_job import iniciar_scheduler
 from Events.Consumers.produto_consumer import iniciar_consumidor_produtos
+from Events.Consumers.pedido_consumer import iniciar_consumidor_pedidos
 
 # Importações para o banco de dados local
 from Data.database import engine, SQLALCHEMY_DATABASE_URL, Base
@@ -42,6 +43,14 @@ async def lifespan(app: FastAPI):
     )
     thread_kafka_produtos.start()
     print("[INFO] Consumidor Kafka de Produtos iniciado em background.")
+
+    thread_kafka_pedidos = Thread(
+        target=iniciar_consumidor_pedidos,
+        name="kafka-pedido-consumer",
+        daemon=True,
+    )
+    thread_kafka_pedidos.start()
+    print("[INFO] Consumidor Kafka de Pedidos iniciado em background.")
 
     yield
     # Ao encerrar o servidor, a thread daemon é finalizada automaticamente.

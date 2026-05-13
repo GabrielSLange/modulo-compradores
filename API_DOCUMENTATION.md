@@ -25,16 +25,22 @@ graph TD
     subgraph Backend [Backend FastAPI - Módulo 4]
         API_REST[API REST Controllers]
         DB[(Banco de Dados Local\nSQLite/PostgreSQL)]
-        KafkaConsumer[Kafka Consumer Background Task]
+        Consumer_Produtos[Consumer Produtos]
+        Consumer_Pedidos[Consumer Pedidos]
     end
 
     %% Integrações Externas
     subgraph Mensageria [Apache Kafka / Redpanda]
         Topic_Produtos[(Tópico: sdi.produto.events)]
+        Topic_Pedidos[(Tópico: sdi.pedidos.events)]
     end
     
     subgraph Modulo_Catalogo [Equipe 2 - Catálogo]
         API_Catalogo[API Catálogo]
+    end
+
+    subgraph Modulo_Pedidos [Equipe 7 - Pedidos]
+        API_Pedidos[API Pedidos]
     end
 
     %% Conexões
@@ -44,8 +50,12 @@ graph TD
     API_REST <-->|Leitura/Escrita| DB
     
     Modulo_Catalogo -->|Publica Eventos| Topic_Produtos
-    Topic_Produtos -->|Consome Eventos| KafkaConsumer
-    KafkaConsumer -->|Atualiza Cache Local| DB
+    Topic_Produtos -->|Consome Eventos| Consumer_Produtos
+    Consumer_Produtos -->|Atualiza Cache Local| DB
+
+    Modulo_Pedidos -->|Publica Eventos| Topic_Pedidos
+    Topic_Pedidos -->|Consome Eventos| Consumer_Pedidos
+    Consumer_Pedidos -->|Atualiza Status Demanda| DB
     
     %% Estilos
     classDef frontend fill:#61dafb,stroke:#333,stroke-width:2px,color:#000;
@@ -54,8 +64,8 @@ graph TD
     classDef db fill:#f59e0b,stroke:#333,stroke-width:2px,color:#000;
     
     class UI,DemandaService frontend;
-    class API_REST,KafkaConsumer backend;
-    class Topic_Produtos kafka;
+    class API_REST,Consumer_Produtos,Consumer_Pedidos backend;
+    class Topic_Produtos,Topic_Pedidos kafka;
     class DB db;
 ```
 
@@ -75,7 +85,10 @@ O módulo atua tanto como **Consumidor** (para espelhar dados externos) quanto c
 
 ### 📥 Consumidor (Eventos Recebidos)
 
-O módulo escuta eventos de produtos para manter um cache local, garantindo resiliência.
+O módulo escuta eventos para manter cache local e sincronizar o status das demandas.
+
+#### 1. Eventos de Produtos (Equipe 2 - Catálogo)
+Garante resiliência tendo um espelho dos produtos localmente.
 - **Tópico:** `sdi.produto.events`
 - **Ação:** Cria/atualiza registros na tabela `produto_cache`.
 - **Payload Esperado:**
@@ -93,45 +106,20 @@ O módulo escuta eventos de produtos para manter um cache local, garantindo resi
 }
 ```
 
-### 📤 Produtor (Eventos Publicados)
-
-O módulo notifica o ecossistema sempre que uma nova demanda de compra surge (seja manualmente ou via agendamento). A chave (Key) da mensagem no Kafka é sempre o `id_demanda`.
-
-#### Evento: Demanda Criada Manualmente
-- **Tópico:** `demanda_criada`
-- **Gatilho:** Quando o comprador cria uma demanda pelo Frontend ou converte um item da Wishlist.
-- **Envelope do Evento:**
+#### 2. Eventos de Pedidos (Equipe 7 - Pedidos)
+**Atenção Equipe 7:** Adotamos a abordagem de *Consumer-Driven Contracts*. O módulo de compradores **exige** que os eventos de criação de pedido trafeguem a informação `id_demanda` correspondente na raiz do payload.
+- **Tópico:** `sdi.pedidos.events`
+- **Ação:** Busca a Demanda pelo ID fornecido e atualiza o seu `status` para `atendida`.
+- **Payload Esperado (Obrigatório):**
 ```json
 {
   "eventId": "uuid-do-evento",
-  "eventType": "demanda_criada",
-  "eventVersion": "1.0",
-  "timestamp": "2023-10-27T10:00:00Z",
-  "source": "modulo-compradores",
-  "correlationId": "uuid-da-demanda",
+  "eventType": "pedido_criado",
+  "correlationId": "uuid-correlacao",
   "payload": {
     "id_demanda": "uuid-da-demanda",
-    "id_produto": "uuid-do-produto",
-    "quantidade_desejada": 10,
-    // ... demais dados da demanda
-  }
-}
-```
-
-#### Evento: Demanda Recorrente Gerada (Job)
-- **Tópico:** `demanda_recorrente_gerada`
-- **Gatilho:** Quando o *APScheduler* roda em background e cria automaticamente uma demanda baseada em uma assinatura/recorrência.
-- **Envelope do Evento:** Formato idêntico ao `demanda_criada`, mudando apenas o `eventType` para `demanda_recorrente_gerada`.
-```json
-{
-  "eventId": "uuid-do-evento",
-  "eventType": "ProdutoCriado", // ou ProdutoAtualizado
-  "timestamp": "2023-10-27T10:00:00Z",
-  "data": {
-    "id": "uuid-do-produto",
-    "codigo": "NOTE-001",
-    "nome": "Notebook XYZ",
-    "ativo": true
+    "id_pedido": "uuid-do-pedido",
+    "status": "processando"
   }
 }
 ```
@@ -155,8 +143,7 @@ O módulo notifica o ecossistema sempre que uma nova demanda de compra surge (se
   "payload": {
     "id_demanda": "uuid-da-demanda",
     "id_produto": "uuid-do-produto",
-    "quantidade_desejada": 10,
-    // ... demais dados da demanda
+    "quantidade_desejada": 10
   }
 }
 ```
