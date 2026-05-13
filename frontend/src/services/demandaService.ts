@@ -1,8 +1,8 @@
 import { api } from "./api";
 import type { Demanda, DemandaStatus } from "@/features/types";
 
-const MOCK_USUARIO_ID = "u-1";
-const MOCK_EMPRESA_ID = "emp-1";
+const MOCK_USUARIO_ID = "usuario-001";
+const MOCK_EMPRESA_ID = "empresa-001";
 
 export async function listarDemandas(): Promise<Demanda[]> {
   return await api.get<Demanda[]>("/api/demandas");

@@ -1,8 +1,8 @@
 import { api } from "./api";
 import type { WishlistItem, Demanda } from "@/features/types";
 
-const MOCK_USUARIO_ID = "u-1";
-const MOCK_EMPRESA_ID = "emp-1";
+const MOCK_USUARIO_ID = "usuario-001";
+const MOCK_EMPRESA_ID = "empresa-001";
 
 export type AdicionarWishlistPayload = Omit<WishlistItem, "id" | "id_usuario" | "id_empresa" | "convertida_em_demanda" | "criado_em">;
 
