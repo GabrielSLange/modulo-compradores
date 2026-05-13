@@ -18,7 +18,6 @@ class Demanda(Base):
     preco_maximo = Column(Numeric(12, 2), nullable=True)
     prioridade = Column(String(10), nullable=False)
     is_recorrente = Column(Boolean, nullable=False, default=False)
-    data_proxima_geracao = Column(Date, nullable=True)
     status = Column(String(20), nullable=False, default="aberta")
     observacoes = Column(Text, nullable=True)
     data_criacao = Column(DateTime, default=lambda: datetime.now(timezone.utc))
