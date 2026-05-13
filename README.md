@@ -15,8 +15,8 @@ Antes de comecar, certifique-se de ter instalado:
 
 Abra o terminal (PowerShell ou CMD) na pasta de sua preferencia e execute:
 
-git clone <URL_DO_REPOSITORIO>
-cd meu-modulo-distribuido
+git clone https://github.com/GabrielSLange/modulo-compradores.git
+cd modulo-compradores
 
 ---
 
