@@ -8,7 +8,7 @@ class WishlistCreateDTO(BaseModel):
     quantidade_desejada: Optional[float] = Field(None, gt=0)
     preco_maximo: Optional[float] = Field(None)
     prioridade: Optional[str] = Field(None, description="baixa, media ou alta")
-    observacoes: Optional[str] = Field(None)
+    observacoes: Optional[str] = Field(None, validation_alias="observacao")
 
 # DTO especial para a conversão
 class WishlistConverterDTO(BaseModel):

@@ -50,7 +50,7 @@ export function EnderecosTab() {
                 <TableCell className="text-sm">{e.logradouro}, {e.numero}{e.complemento ? ` — ${e.complemento}` : ""} · {e.bairro}</TableCell>
                 <TableCell>{e.cidade}/{e.uf}</TableCell>
                 <TableCell className="font-mono text-sm">{e.cep}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">{format(new Date(e.criado_em), "dd/MM/yyyy")}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">{format(new Date(e.data_criacao), "dd/MM/yyyy")}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
                     <EnderecoDialog

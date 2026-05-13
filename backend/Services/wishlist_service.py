@@ -49,6 +49,7 @@ class WishlistService:
             quantidade_desejada=dto.quantidade_desejada,
             preco_maximo=item.preco_maximo,
             prioridade=dto.prioridade,
+            observacoes=item.observacoes,
             is_recorrente=False # Conversão simples não é recorrente por padrão
         )
 

@@ -11,5 +11,6 @@ class DemandaCreateDTO(BaseModel):
     quantidade_desejada: float = Field(..., gt=0, description="Quantidade deve ser maior que zero")
     preco_maximo: Optional[float] = Field(None, description="Preço máximo aceito (opcional)")
     prioridade: str = Field(..., description="baixa, media ou alta")
+    observacoes: Optional[str] = Field(None, validation_alias="observacao")
     is_recorrente: bool = Field(default=False, description="Define se a demanda é recorrente")
     recorrencia: Optional[DemandaRecorrenciaCreateDTO] = Field(None, description="Dados da recorrência se is_recorrente for true")

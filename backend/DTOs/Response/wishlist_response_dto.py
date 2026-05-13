@@ -9,10 +9,10 @@ class WishlistResponseDTO(BaseModel):
     quantidade_desejada: Optional[float] = None
     preco_maximo: Optional[float] = None
     prioridade: Optional[str] = None
-    observacoes: Optional[str] = None
+    observacao: Optional[str] = Field(None, validation_alias="observacoes")
     convertido_em_demanda: bool
     id_demanda_gerada: Optional[str] = None
-    criado_em: datetime  # coluna já se chama criado_em no model
+    data_criacao: datetime
 
     model_config = {
         "from_attributes": True,

@@ -4,7 +4,7 @@ import type { EnderecoEntrega } from "@/features/types";
 // Mock para id da empresa — no futuro virá do contexto/auth
 const MOCK_EMPRESA_ID = "empresa-001";
 
-export type CriarEnderecoPayload = Omit<EnderecoEntrega, "id" | "id_empresa" | "criado_em" | "ativo" | "numero"> & {
+export type CriarEnderecoPayload = Omit<EnderecoEntrega, "id" | "id_empresa" | "data_criacao" | "ativo" | "numero"> & {
   numero?: string;
 };
 

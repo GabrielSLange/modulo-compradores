@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from sqlalchemy import Column, String, Numeric, Boolean, DateTime, Date, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -15,7 +16,7 @@ class DemandaRecorrencia(Base):
     data_fim = Column(Date, nullable=True)
     dia_preferencial = Column(String(20), nullable=True)
     ativa = Column(Boolean, nullable=False, default=True)
-    criado_em = Column(DateTime, nullable=False, server_default=func.now())
+    data_criacao = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     atualizado_em = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
 
     demanda = relationship("Demanda", back_populates="recorrencia")

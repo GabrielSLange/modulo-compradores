@@ -16,7 +16,7 @@ export interface EnderecoEntrega {
   uf: string;
   cep: string;
   ativo: boolean;
-  criado_em: string;
+  data_criacao: string;
 }
 
 export interface DemandaRecorrencia {
@@ -39,7 +39,7 @@ export interface Demanda {
   status: DemandaStatus;
   is_recorrente: boolean;
   recorrencia?: DemandaRecorrencia;
-  criado_em: string;
+  data_criacao: string;
   atualizado_em: string;
 }
 
@@ -52,7 +52,7 @@ export interface WishlistItem {
   observacao?: string;
   convertida_em_demanda: boolean;
   id_demanda_gerada?: string;
-  criado_em: string;
+  data_criacao: string;
 }
 
 // Projeção local de Produto (Equipe 2) — alimentada por eventos Kafka.

@@ -15,7 +15,7 @@ class EnderecoResponseDTO(BaseModel):
     uf: str = Field(validation_alias="estado")
     cep: str
     ativo: bool
-    criado_em: Optional[datetime] = None  # coluna já se chama criado_em no model
+    data_criacao: Optional[datetime] = None
 
     model_config = {
         "from_attributes": True,

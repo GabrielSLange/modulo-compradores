@@ -140,7 +140,7 @@ export function WishlistTab() {
                   )}
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
-                  {format(new Date(w.criado_em), "dd/MM/yyyy")}
+                  {format(new Date(w.data_criacao), "dd/MM/yyyy")}
                 </TableCell>
                 <TableCell className="text-right">
                   {!w.convertida_em_demanda && (

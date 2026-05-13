@@ -10,7 +10,7 @@ export async function listarDemandas(): Promise<Demanda[]> {
 
 export type CriarDemandaPayload = Omit<
   Demanda,
-  "id" | "id_usuario_criador" | "id_empresa_comprador" | "status" | "criado_em" | "atualizado_em"
+  "id" | "id_usuario_criador" | "id_empresa_comprador" | "status" | "data_criacao" | "atualizado_em"
 >;
 
 export async function criarDemanda(payload: CriarDemandaPayload): Promise<Demanda> {

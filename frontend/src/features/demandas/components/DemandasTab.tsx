@@ -121,7 +121,7 @@ export function DemandasTab() {
                   </TableCell>
                   <TableCell><StatusBadge status={d.status} /></TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {format(new Date(d.criado_em), "dd/MM/yyyy HH:mm")}
+                    {format(new Date(d.data_criacao), "dd/MM/yyyy HH:mm")}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">

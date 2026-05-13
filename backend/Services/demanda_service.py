@@ -18,7 +18,8 @@ class DemandaService:
             preco_maximo=dto.preco_maximo,
             prioridade=dto.prioridade,
             is_recorrente=dto.is_recorrente,
-            status="aberta"
+            status="aberta",
+            observacoes=dto.observacoes
         )
         db.add(nova_demanda)
         db.flush() # Salva temporariamente para gerar o ID da demanda

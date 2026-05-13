@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from sqlalchemy import Column, String, Numeric, Boolean, DateTime, Text, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -17,7 +18,7 @@ class WishlistItem(Base):
     observacoes = Column(Text, nullable=True)
     convertido_em_demanda = Column(Boolean, nullable=False, default=False)
     id_demanda_gerada = Column(String, ForeignKey("demanda.id_demanda"), nullable=True)
-    criado_em = Column(DateTime, nullable=False, server_default=func.now())
+    data_criacao = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     atualizado_em = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
 
     demanda_gerada = relationship("Demanda", back_populates="wishlist_items")

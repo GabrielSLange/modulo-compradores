@@ -35,7 +35,7 @@ export function useCreateDemanda() {
         id_empresa_comprador: "emp-1",
         id: "tmp-" + Math.random().toString(36).slice(2, 8),
         status: "aberta",
-        criado_em: new Date().toISOString(),
+        data_criacao: new Date().toISOString(),
         atualizado_em: new Date().toISOString(),
       };
       qc.setQueryData<Demanda[]>(KEY, [optimistic, ...prev]);

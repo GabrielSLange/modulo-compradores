@@ -31,7 +31,7 @@ export function VisualizarDemandaDialog({ demanda }: Props) {
             <StatusBadge status={demanda.status} />
           </DialogTitle>
           <DialogDescription>
-            Criada em {format(new Date(demanda.criado_em), "dd/MM/yyyy 'às' HH:mm")}
+            Criada em {format(new Date(demanda.data_criacao), "dd/MM/yyyy 'às' HH:mm")}
           </DialogDescription>
         </DialogHeader>
 

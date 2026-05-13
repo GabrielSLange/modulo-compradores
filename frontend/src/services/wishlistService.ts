@@ -4,7 +4,7 @@ import type { WishlistItem, Demanda } from "@/features/types";
 const MOCK_USUARIO_ID = "usuario-001";
 const MOCK_EMPRESA_ID = "empresa-001";
 
-export type AdicionarWishlistPayload = Omit<WishlistItem, "id" | "id_usuario" | "id_empresa" | "convertida_em_demanda" | "criado_em">;
+export type AdicionarWishlistPayload = Omit<WishlistItem, "id" | "id_usuario" | "id_empresa" | "convertida_em_demanda" | "data_criacao">;
 
 export async function listarWishlist(): Promise<WishlistItem[]> {
   return await api.get<WishlistItem[]>("/api/demandas/wishlist");

@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from sqlalchemy import Column, String, Numeric, Boolean, DateTime
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -20,7 +21,7 @@ class EnderecoEntrega(Base):
     latitude = Column(Numeric(9, 6), nullable=True)
     longitude = Column(Numeric(9, 6), nullable=True)
     ativo = Column(Boolean, nullable=False, default=True)
-    criado_em = Column(DateTime, nullable=False, server_default=func.now())
+    data_criacao = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     atualizado_em = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
 
     # Usamos string "Demanda" para evitar erro de importação circular no Python
