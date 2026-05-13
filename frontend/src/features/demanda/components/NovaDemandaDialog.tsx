@@ -18,7 +18,7 @@ import {
 
 import { useCreateDemanda } from "../hooks/useDemandas";
 import { useEnderecos } from "../hooks/useEnderecos";
-import { mockProdutosCatalog } from "../mocks/store";
+import { useProdutos } from "../hooks/useProduto"; // Importa o hook correto para listar produtos
 import type { RecorrenciaFrequencia } from "../types";
 
 // Validação dinâmica: quando is_recorrente=true, recorrencia.* vira obrigatório.
@@ -45,7 +45,8 @@ type FormValues = z.infer<typeof schema>;
 
 export function NovaDemandaDialog() {
   const [open, setOpen] = useState(false);
-  const { data: enderecos = [] } = useEnderecos();
+  const { data: enderecos, isLoading: isLoadingEnderecos, isError: isErrorEnderecos } = useEnderecos();
+  const { data: produtos, isLoading: isLoadingProdutos, isError: isErrorProdutos } = useProdutos(); // Usa useProdutos
   const create = useCreateDemanda();
 
   const form = useForm<FormValues>({
@@ -95,11 +96,27 @@ export function NovaDemandaDialog() {
         <form onSubmit={onSubmit} className="grid grid-cols-2 gap-4">
           <div className="col-span-2 sm:col-span-1 space-y-1.5">
             <Label>Produto *</Label>
-            <Select onValueChange={(v) => form.setValue("id_produto", v, { shouldValidate: true })}>
-              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+            <Select
+              onValueChange={(v) => form.setValue("id_produto", v, { shouldValidate: true })}
+              disabled={isLoadingProdutos || isErrorProdutos}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={
+                  isLoadingProdutos ? "Carregando produtos..."
+                  : isErrorProdutos ? "Erro ao carregar produtos"
+                  : !produtos || produtos.length === 0 ? "Nenhum produto cadastrado"
+                  : "Selecione"
+                } />
+              </SelectTrigger>
               <SelectContent>
-                {mockProdutosCatalog.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>{p.codigo} — {p.nome}</SelectItem>
+                {isErrorProdutos && <SelectItem value="error" disabled>Erro ao carregar produtos</SelectItem>}
+                {!isLoadingProdutos && !isErrorProdutos && (!produtos || produtos.length === 0) && (
+                  <SelectItem value="empty" disabled>Nenhum produto encontrado</SelectItem>
+                )}
+                {produtos?.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.codigo} — {p.nome}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -110,11 +127,27 @@ export function NovaDemandaDialog() {
 
           <div className="col-span-2 sm:col-span-1 space-y-1.5">
             <Label>Endereço de entrega *</Label>
-            <Select onValueChange={(v) => form.setValue("id_endereco_entrega", v, { shouldValidate: true })}>
-              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+            <Select
+              onValueChange={(v) => form.setValue("id_endereco_entrega", v, { shouldValidate: true })}
+              disabled={isLoadingEnderecos || isErrorEnderecos}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={
+                  isLoadingEnderecos ? "Carregando endereços..."
+                  : isErrorEnderecos ? "Erro ao carregar endereços"
+                  : !enderecos || enderecos.length === 0 ? "Nenhum endereço encontrado"
+                  : "Selecione"
+                } />
+              </SelectTrigger>
               <SelectContent>
-                {enderecos.map((e) => (
-                  <SelectItem key={e.id} value={e.id}>{e.apelido} — {e.cidade}/{e.uf}</SelectItem>
+                {isErrorEnderecos && <SelectItem value="error" disabled>Erro ao carregar endereços</SelectItem>}
+                {!isLoadingEnderecos && !isErrorEnderecos && (!enderecos || enderecos.length === 0) && (
+                  <SelectItem value="empty" disabled>Nenhum endereço encontrado</SelectItem>
+                )}
+                {enderecos?.map((e) => (
+                  <SelectItem key={e.id} value={e.id}>
+                    {e.apelido} — {e.cidade}/{e.uf}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>

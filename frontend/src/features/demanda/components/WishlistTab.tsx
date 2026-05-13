@@ -20,8 +20,8 @@ import {
 
 import { useAddWishlist, useConvertWishlist, useWishlist } from "../hooks/useWishlist";
 import { useEnderecos } from "../hooks/useEnderecos";
+import { useProdutos } from "../hooks/useProduto"; // Importa o hook correto para listar produtos
 import { ProdutoCell } from "./ProdutoCell";
-import { mockProdutosCatalog } from "../mocks/store";
 
 const schema = z.object({
   id_produto: z.string().min(1),
@@ -32,7 +32,8 @@ type Form = z.infer<typeof schema>;
 
 export function WishlistTab() {
   const { data: items, isLoading } = useWishlist();
-  const { data: enderecos = [] } = useEnderecos();
+  const { data: enderecos, isLoading: isLoadingEnderecos, isError: isErrorEnderecos } = useEnderecos();
+  const { data: produtos, isLoading: isLoadingProdutos, isError: isErrorProdutos } = useProdutos(); // Usa useProdutos
   const add = useAddWishlist();
   const convert = useConvertWishlist();
   const [open, setOpen] = useState(false);
@@ -74,10 +75,24 @@ export function WishlistTab() {
             >
               <div className="space-y-1.5">
                 <Label>Produto</Label>
-                <Select onValueChange={(v) => form.setValue("id_produto", v, { shouldValidate: true })}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <Select
+                  onValueChange={(v) => form.setValue("id_produto", v, { shouldValidate: true })}
+                  disabled={isLoadingProdutos || isErrorProdutos}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={
+                      isLoadingProdutos ? "Carregando produtos..."
+                      : isErrorProdutos ? "Erro ao carregar produtos"
+                      : !produtos || produtos.length === 0 ? "Nenhum produto cadastrado"
+                      : "Selecione"
+                    } />
+                  </SelectTrigger>
                   <SelectContent>
-                    {mockProdutosCatalog.map((p) => (
+                    {isErrorProdutos && <SelectItem value="error" disabled>Erro ao carregar produtos</SelectItem>}
+                    {!isLoadingProdutos && !isErrorProdutos && (!produtos || produtos.length === 0) && (
+                      <SelectItem value="empty" disabled>Nenhum produto encontrado</SelectItem>
+                    )}
+                    {produtos?.map((p) => (
                       <SelectItem key={p.id} value={p.id}>{p.codigo} — {p.nome}</SelectItem>
                     ))}
                   </SelectContent>
@@ -163,10 +178,25 @@ export function WishlistTab() {
           <div className="space-y-3">
             <div className="space-y-1.5">
               <Label>Endereço de entrega</Label>
-              <Select value={endereco} onValueChange={setEndereco}>
-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+              <Select
+                value={endereco}
+                onValueChange={setEndereco}
+                disabled={isLoadingEnderecos || isErrorEnderecos}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={
+                    isLoadingEnderecos ? "Carregando endereços..."
+                    : isErrorEnderecos ? "Erro ao carregar endereços"
+                    : !enderecos || enderecos.length === 0 ? "Nenhum endereço encontrado"
+                    : "Selecione"
+                  } />
+                </SelectTrigger>
                 <SelectContent>
-                  {enderecos.map((e) => (
+                  {isErrorEnderecos && <SelectItem value="error" disabled>Erro ao carregar endereços</SelectItem>}
+                  {!isLoadingEnderecos && !isErrorEnderecos && (!enderecos || enderecos.length === 0) && (
+                    <SelectItem value="empty" disabled>Nenhum endereço encontrado</SelectItem>
+                  )}
+                  {enderecos?.map((e) => (
                     <SelectItem key={e.id} value={e.id}>{e.apelido} — {e.cidade}/{e.uf}</SelectItem>
                   ))}
                 </SelectContent>

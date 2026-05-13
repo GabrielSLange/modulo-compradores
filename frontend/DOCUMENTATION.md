@@ -10,8 +10,6 @@ Este módulo é responsável pela interface de gestão de **Demandas** (intenç�
 
 O front foi construído de forma **totalmente desacoplada** do back-end, tratando dados de outros bounded contexts (ex.: Produto, da Equipe 2) como **projeções locais** alimentadas por eventos Kafka. Isso significa que a UI precisa lidar com **consistência eventual** — um `id_produto` pode existir em uma demanda sem que os dados completos do produto já tenham sido sincronizados localmente.
 
-> **Estado atual:** o back-end ainda não está disponível. Toda a camada de dados está coberta por **mocks em memória** com latência artificial e simulação de eventos do *Matching Engine* (Equipe 5). A integração real é uma troca direta na camada de mocks, sem mexer em componentes.
-
 ---
 
 ## 2. Stack Tecnológica
@@ -66,9 +64,9 @@ A pasta `features/demanda/` é **autocontida**: tudo que diz respeito ao domíni
 Os tipos em `src/features/demanda/types.ts` espelham 1:1 o DBML do banco isolado do serviço:
 
 - **`Demanda`** — intenção de compra. Pode ser **única** ou **recorrente**. Status: `aberta | em_negociacao | atendida | cancelada`.
-- **`DemandaRecorrencia`** — `frequencia` (`diaria | semanal | mensal`), `data_inicio`, `data_fim?`, `dia_preferencial`.
-- **`WishlistItem`** — item desejado, conversível em Demanda. Mantém `convertida_em_demanda` e `id_demanda_gerada`.
-- **`EnderecoEntrega`** — endereço da empresa compradora, usado como destino da demanda.
+- **`DemandaRecorrencia`** — `frequencia` (`diaria | semanal | mensal`), `data_inicio`, `data_fim?`, `dia_preferencial`, `data_criacao`, `atualizado_em`.
+- **`WishlistItem`** — item desejado, conversível em Demanda. Mantém `convertida_em_demanda`, `id_demanda_gerada`, `data_criacao`, `atualizado_em`.
+- **`EnderecoEntrega`** — endereço da empresa compradora, usado como destino da demanda. Inclui `data_criacao` e `atualizado_em`.
 - **`ProdutoProjecao`** — **projeção local** de Produto (Equipe 2). Alimentada por eventos Kafka. Pode estar ausente quando o evento ainda não foi consumido.
 
 ---
@@ -148,19 +146,7 @@ CRUD simples para alimentar o `Select` de entrega no formulário de demanda.
 
 ---
 
-## 9. Como Integrar com o Back-End Real
-
-A camada de mocks foi desenhada para minimizar atrito na integração:
-
-1. Em `src/features/demanda/mocks/store.ts`, substituir cada método de `mockApi` por uma chamada `fetch` (ou axios) ao endpoint correspondente do microserviço de Demanda.
-2. **Manter as mesmas assinaturas** — nenhum hook ou componente precisa mudar.
-3. Adicionar interceptor de **JWT** no client HTTP (header `Authorization: Bearer ...`).
-4. Trocar `refetchInterval` por **WebSocket subscription** nos eventos Kafka relevantes (`demanda_atualizada`, `produto_sincronizado`, etc.) e usar `queryClient.setQueryData` para reatividade real.
-5. Para a projeção de Produto, ler do endpoint `/produtos/projecao/:id` que consulta a tabela local alimentada pelo consumer Kafka — o fallback "Produto não identificado" continua valendo.
-
----
-
-## 10. Como Rodar
+## 9. Como Rodar
 
 ```bash
 bun install
@@ -171,9 +157,8 @@ A aplicação sobe em `http://localhost:8080` (configuração padrão do templat
 
 ---
 
-## 11. Próximos Passos
+## 10. Próximos Passos
 
-- Substituir mocks por API REST do back.
 - Adicionar WebSocket para eventos Kafka em tempo real.
 - Implementar tela de detalhes da demanda com histórico de propostas (Equipe 5).
 - Internacionalização (i18n) caso necessário.

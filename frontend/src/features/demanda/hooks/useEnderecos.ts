@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { listarEnderecos, criarEndereco } from "@/services/demandaService";
+import { listarEnderecos, criarEndereco, type CriarEnderecoPayload } from "@/services/demandaService";
 import type { EnderecoEntrega } from "../types";
 
 const KEY = ["enderecos"] as const;
@@ -12,7 +12,7 @@ export function useEnderecos() {
 export function useCreateEndereco() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (p: Omit<EnderecoEntrega, "id" | "criado_em" | "ativo">) => criarEndereco(p),
+    mutationFn: (p: CriarEnderecoPayload) => criarEndereco(p),
     onSuccess: () => {
       toast.success("Endereço cadastrado");
       qc.invalidateQueries({ queryKey: KEY });

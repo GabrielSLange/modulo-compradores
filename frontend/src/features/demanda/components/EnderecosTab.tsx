@@ -18,7 +18,7 @@ import { useCreateEndereco, useEnderecos } from "../hooks/useEnderecos";
 const schema = z.object({
   apelido: z.string().min(1),
   logradouro: z.string().min(1),
-  numero: z.string().min(1),
+  numero: z.string().optional(),
   complemento: z.string().optional(),
   bairro: z.string().min(1),
   cidade: z.string().min(1),
