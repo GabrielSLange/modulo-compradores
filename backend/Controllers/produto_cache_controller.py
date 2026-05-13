@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 from Data.database import SessionLocal
@@ -39,15 +39,26 @@ class ProdutoProjecaoDTO(BaseModel):
 
 
 @router.get(
+    "/produtos/projecao",
+    response_model=List[ProdutoProjecaoDTO],
+)
+@router.get(
     "/produtos/projecao/{id_produto}",
     response_model=ProdutoProjecaoDTO,
 )
-def get_produto_projecao(id_produto: str, db: Session = Depends(get_db)):
+def get_produto_projecao(
+    id_produto: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
     """
-    Retorna a projeção local de um produto a partir do cache Kafka.
-    Usado pelo frontend para exibir o nome/código do produto nas demandas.
-    Retorna 404 se o produto ainda não tiver sido sincronizado via Kafka.
+    Retorna a projeção local de produto(s) a partir do cache Kafka.
+    - Sem id_produto: retorna todos os produtos do cache.
+    - Com id_produto: retorna o produto específico (404 se não encontrado).
+    Alimentado exclusivamente pelo consumidor Kafka (tópico sdi.produto.events).
     """
+    if id_produto is None:
+        return db.query(ProdutoCache).all()
+
     produto = db.query(ProdutoCache).filter(ProdutoCache.id_produto == id_produto).first()
     if not produto:
         raise HTTPException(
