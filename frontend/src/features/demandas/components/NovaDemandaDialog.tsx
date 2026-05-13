@@ -15,11 +15,12 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { AsyncSelect } from "@/components/ui/async-select";
 
 import { useCreateDemanda } from "../hooks/useDemandas";
-import { useEnderecos } from "../hooks/useEnderecos";
-import { useProdutos } from "../hooks/useProduto"; // Importa o hook correto para listar produtos
-import type { RecorrenciaFrequencia } from "../types";
+import { useEnderecos } from "@/features/enderecos/hooks/useEnderecos";
+import { useProdutos } from "@/features/produtos/hooks/useProduto";
+import type { RecorrenciaFrequencia } from "@/features/types";
 
 // Validação dinâmica: quando is_recorrente=true, recorrencia.* vira obrigatório.
 const schema = z
@@ -60,8 +61,6 @@ export function NovaDemandaDialog() {
 
   const onSubmit = form.handleSubmit((v) => {
     create.mutate({
-      id_usuario_criador: "u-1",          // mock JWT
-      id_empresa_comprador: "emp-1",      // mock JWT
       id_produto: v.id_produto,
       id_endereco_destino: v.id_endereco_destino,
       quantidade_desejada: v.quantidade_desejada,
@@ -103,30 +102,17 @@ export function NovaDemandaDialog() {
         <form onSubmit={onSubmit} className="grid grid-cols-2 gap-4">
           <div className="col-span-2 sm:col-span-1 space-y-1.5">
             <Label>Produto *</Label>
-            <Select
+            <AsyncSelect
+              value={form.watch("id_produto")}
               onValueChange={(v) => form.setValue("id_produto", v, { shouldValidate: true })}
-              disabled={isLoadingProdutos || isErrorProdutos}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={
-                  isLoadingProdutos ? "Carregando produtos..."
-                  : isErrorProdutos ? "Erro ao carregar produtos"
-                  : !produtos || produtos.length === 0 ? "Nenhum produto cadastrado"
-                  : "Selecione"
-                } />
-              </SelectTrigger>
-              <SelectContent>
-                {isErrorProdutos && <SelectItem value="error" disabled>Erro ao carregar produtos</SelectItem>}
-                {!isLoadingProdutos && !isErrorProdutos && (!produtos || produtos.length === 0) && (
-                  <SelectItem value="empty" disabled>Nenhum produto encontrado</SelectItem>
-                )}
-                {produtos?.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.codigo} — {p.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              isLoading={isLoadingProdutos}
+              isError={isErrorProdutos}
+              options={produtos?.map((p) => ({ value: p.id, label: `${p.codigo} — ${p.nome}` }))}
+              placeholder="Selecione um produto"
+              loadingMessage="Carregando produtos..."
+              errorMessage="Erro ao carregar produtos"
+              emptyMessage="Nenhum produto cadastrado"
+            />
             {form.formState.errors.id_produto && (
               <p className="text-xs text-destructive">{form.formState.errors.id_produto.message}</p>
             )}
@@ -134,30 +120,17 @@ export function NovaDemandaDialog() {
 
           <div className="col-span-2 sm:col-span-1 space-y-1.5">
             <Label>Endereço de entrega *</Label>
-            <Select
+            <AsyncSelect
+              value={form.watch("id_endereco_destino")}
               onValueChange={(v) => form.setValue("id_endereco_destino", v, { shouldValidate: true })}
-              disabled={isLoadingEnderecos || isErrorEnderecos}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={
-                  isLoadingEnderecos ? "Carregando endereços..."
-                  : isErrorEnderecos ? "Erro ao carregar endereços"
-                  : !enderecos || enderecos.length === 0 ? "Nenhum endereço encontrado"
-                  : "Selecione"
-                } />
-              </SelectTrigger>
-              <SelectContent>
-                {isErrorEnderecos && <SelectItem value="error" disabled>Erro ao carregar endereços</SelectItem>}
-                {!isLoadingEnderecos && !isErrorEnderecos && (!enderecos || enderecos.length === 0) && (
-                  <SelectItem value="empty" disabled>Nenhum endereço encontrado</SelectItem>
-                )}
-                {enderecos?.map((e) => (
-                  <SelectItem key={e.id} value={e.id}>
-                    {e.apelido} — {e.cidade}/{e.uf}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              isLoading={isLoadingEnderecos}
+              isError={isErrorEnderecos}
+              options={enderecos?.map((e) => ({ value: e.id, label: `${e.apelido} — ${e.cidade}/${e.uf}` }))}
+              placeholder="Selecione um endereço"
+              loadingMessage="Carregando endereços..."
+              errorMessage="Erro ao carregar endereços"
+              emptyMessage="Nenhum endereço cadastrado"
+            />
             {form.formState.errors.id_endereco_destino && (
               <p className="text-xs text-destructive">{form.formState.errors.id_endereco_destino.message}</p>
             )}

@@ -4,8 +4,9 @@ import {
   listarWishlist,
   adicionarWishlist,
   converterWishlist,
-} from "@/services/demandaService";
-import type { WishlistItem } from "../types";
+  type AdicionarWishlistPayload,
+} from "@/services/wishlistService";
+import type { WishlistItem } from "@/features/types";
 
 const KEY = ["wishlist"] as const;
 
@@ -16,7 +17,7 @@ export function useWishlist() {
 export function useAddWishlist() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (p: Omit<WishlistItem, "id" | "convertida_em_demanda" | "criado_em">) =>
+    mutationFn: (p: AdicionarWishlistPayload) =>
       adicionarWishlist(p),
     onSuccess: () => {
       toast.success("Item adicionado à wishlist", { description: "Evento wishlist_item_adicionado publicado." });

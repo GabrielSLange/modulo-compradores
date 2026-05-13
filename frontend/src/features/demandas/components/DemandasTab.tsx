@@ -11,11 +11,11 @@ import {
 } from "@/components/ui/select";
 
 import { useDemandas, useUpdateStatus } from "../hooks/useDemandas";
-import { ProdutoCell } from "./ProdutoCell";
+import { ProdutoCell } from "@/features/produtos/components/ProdutoCell";
 import { StatusBadge } from "./StatusBadge";
 import { NovaDemandaDialog } from "./NovaDemandaDialog";
 import { VisualizarDemandaDialog } from "./VisualizarDemandaDialog";
-import type { DemandaStatus } from "../types";
+import type { DemandaStatus } from "@/features/types";
 
 export function DemandasTab() {
   const { data: demandas, isLoading, refetch, isFetching } = useDemandas();

@@ -6,10 +6,10 @@ import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 
-import type { Demanda } from "../types";
-import { ProdutoCell } from "./ProdutoCell";
+import type { Demanda } from "@/features/types";
+import { ProdutoCell } from "@/features/produtos/components/ProdutoCell";
 import { StatusBadge } from "./StatusBadge";
-import { useEnderecos } from "../hooks/useEnderecos";
+import { useEnderecos } from "@/features/enderecos/hooks/useEnderecos";
 
 interface Props {
   demanda: Demanda;

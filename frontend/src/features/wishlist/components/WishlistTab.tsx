@@ -17,11 +17,12 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { AsyncSelect } from "@/components/ui/async-select";
 
 import { useAddWishlist, useConvertWishlist, useWishlist } from "../hooks/useWishlist";
-import { useEnderecos } from "../hooks/useEnderecos";
-import { useProdutos } from "../hooks/useProduto"; // Importa o hook correto para listar produtos
-import { ProdutoCell } from "./ProdutoCell";
+import { useEnderecos } from "@/features/enderecos/hooks/useEnderecos";
+import { useProdutos } from "@/features/produtos/hooks/useProduto";
+import { ProdutoCell } from "@/features/produtos/components/ProdutoCell";
 
 const schema = z.object({
   id_produto: z.string().min(1),
@@ -62,8 +63,6 @@ export function WishlistTab() {
             <form
               onSubmit={form.handleSubmit(async (v) => {
                 await add.mutateAsync({
-                  id_usuario: "u-1",
-                  id_empresa: "emp-1",
                   id_produto: v.id_produto,
                   quantidade_desejada: v.quantidade_desejada,
                   observacao: v.observacao,
@@ -75,28 +74,17 @@ export function WishlistTab() {
             >
               <div className="space-y-1.5">
                 <Label>Produto</Label>
-                <Select
+                <AsyncSelect
+                  value={form.watch("id_produto")}
                   onValueChange={(v) => form.setValue("id_produto", v, { shouldValidate: true })}
-                  disabled={isLoadingProdutos || isErrorProdutos}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={
-                      isLoadingProdutos ? "Carregando produtos..."
-                      : isErrorProdutos ? "Erro ao carregar produtos"
-                      : !produtos || produtos.length === 0 ? "Nenhum produto cadastrado"
-                      : "Selecione"
-                    } />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {isErrorProdutos && <SelectItem value="error" disabled>Erro ao carregar produtos</SelectItem>}
-                    {!isLoadingProdutos && !isErrorProdutos && (!produtos || produtos.length === 0) && (
-                      <SelectItem value="empty" disabled>Nenhum produto encontrado</SelectItem>
-                    )}
-                    {produtos?.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.codigo} — {p.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  isLoading={isLoadingProdutos}
+                  isError={isErrorProdutos}
+                  options={produtos?.map((p) => ({ value: p.id, label: `${p.codigo} — ${p.nome}` }))}
+                  placeholder="Selecione um produto"
+                  loadingMessage="Carregando produtos..."
+                  errorMessage="Erro ao carregar produtos"
+                  emptyMessage="Nenhum produto cadastrado"
+                />
               </div>
               <div className="space-y-1.5">
                 <Label>Quantidade desejada</Label>
@@ -178,29 +166,17 @@ export function WishlistTab() {
           <div className="space-y-3">
             <div className="space-y-1.5">
               <Label>Endereço de entrega</Label>
-              <Select
+              <AsyncSelect
                 value={endereco}
                 onValueChange={setEndereco}
-                disabled={isLoadingEnderecos || isErrorEnderecos}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={
-                    isLoadingEnderecos ? "Carregando endereços..."
-                    : isErrorEnderecos ? "Erro ao carregar endereços"
-                    : !enderecos || enderecos.length === 0 ? "Nenhum endereço encontrado"
-                    : "Selecione"
-                  } />
-                </SelectTrigger>
-                <SelectContent>
-                  {isErrorEnderecos && <SelectItem value="error" disabled>Erro ao carregar endereços</SelectItem>}
-                  {!isLoadingEnderecos && !isErrorEnderecos && (!enderecos || enderecos.length === 0) && (
-                    <SelectItem value="empty" disabled>Nenhum endereço encontrado</SelectItem>
-                  )}
-                  {enderecos?.map((e) => (
-                    <SelectItem key={e.id} value={e.id}>{e.apelido} — {e.cidade}/{e.uf}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                isLoading={isLoadingEnderecos}
+                isError={isErrorEnderecos}
+                options={enderecos?.map((e) => ({ value: e.id, label: `${e.apelido} — ${e.cidade}/${e.uf}` }))}
+                placeholder="Selecione um endereço"
+                loadingMessage="Carregando endereços..."
+                errorMessage="Erro ao carregar endereços"
+                emptyMessage="Nenhum endereço cadastrado"
+              />
             </div>
           </div>
           <DialogFooter>

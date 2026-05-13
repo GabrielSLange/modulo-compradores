@@ -7,7 +7,7 @@ import type {
   EnderecoEntrega,
   ProdutoProjecao,
   WishlistItem,
-} from "../types";
+} from "@/features/types";
 
 const delay = (ms = 450) => new Promise((r) => setTimeout(r, ms));
 const uid = () => Math.random().toString(36).slice(2, 10).toUpperCase();

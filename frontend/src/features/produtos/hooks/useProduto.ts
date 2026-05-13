@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { getProdutos } from "@/services/demandaService";
-import type { Produto } from "@/services/demandaService";
+import { getProdutos } from "@/services/produtoService";
+import type { Produto } from "@/services/produtoService";
 
 /**
  * Hook para buscar a LISTA COMPLETA de produtos.

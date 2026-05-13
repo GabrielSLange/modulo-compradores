@@ -6,8 +6,8 @@ import {
   atualizarEndereco,
   excluirEndereco,
   type CriarEnderecoPayload,
-} from "@/services/demandaService";
-import type { EnderecoEntrega } from "../types";
+} from "@/services/enderecoService";
+import type { EnderecoEntrega } from "@/features/types";
 
 const KEY = ["enderecos"] as const;
 
@@ -44,7 +44,7 @@ export function useUpdateEndereco() {
 export function useDeleteEndereco() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, id_empresa }: { id: string; id_empresa: string }) => excluirEndereco(id, id_empresa),
+    mutationFn: (id: string) => excluirEndereco(id),
     onSuccess: () => {
       toast.success("Endereço excluído");
       qc.invalidateQueries({ queryKey: KEY });

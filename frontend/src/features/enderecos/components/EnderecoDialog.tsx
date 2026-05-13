@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 
 import { useCreateEndereco, useUpdateEndereco } from "../hooks/useEnderecos";
-import type { EnderecoEntrega } from "../types";
+import type { EnderecoEntrega } from "@/features/types";
 
 const schema = z.object({
   apelido: z.string().min(1),
@@ -65,11 +65,11 @@ export function EnderecoDialog({ endereco, trigger }: Props) {
 
   const onSubmit = form.handleSubmit((v) => {
     if (endereco) {
-      update.mutate({ id: endereco.id, payload: { ...v, id_empresa: "emp-1" } }, {
+      update.mutate({ id: endereco.id, payload: v }, {
         onSuccess: () => setOpen(false)
       });
     } else {
-      create.mutate({ ...v, id_empresa: "emp-1" }, {
+      create.mutate(v, {
         onSuccess: () => setOpen(false)
       });
     }

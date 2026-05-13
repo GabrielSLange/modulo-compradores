@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import type { DemandaStatus } from "../types";
+import type { DemandaStatus } from "@/features/types";
 
 const map: Record<DemandaStatus, { label: string; cls: string }> = {
   aberta:        { label: "Aberta",         cls: "bg-accent text-accent-foreground border border-primary/20" },

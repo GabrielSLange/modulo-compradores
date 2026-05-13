@@ -7,7 +7,7 @@ import {
   atualizarStatus,
   type CriarDemandaPayload,
 } from "@/services/demandaService";
-import type { Demanda, DemandaStatus } from "../types";
+import type { Demanda, DemandaStatus } from "@/features/types";
 
 const KEY = ["demandas"] as const;
 
@@ -31,6 +31,8 @@ export function useCreateDemanda() {
       const prev = qc.getQueryData<Demanda[]>(KEY) ?? [];
       const optimistic: Demanda = {
         ...payload,
+        id_usuario_criador: "u-1",
+        id_empresa_comprador: "emp-1",
         id: "tmp-" + Math.random().toString(36).slice(2, 8),
         status: "aberta",
         criado_em: new Date().toISOString(),

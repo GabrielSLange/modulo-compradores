@@ -65,7 +65,7 @@ export function EnderecosTab() {
                       size="icon"
                       variant="ghost"
                       title="Excluir"
-                      onClick={() => deleteEndereco.mutate({ id: e.id, id_empresa: "emp-1" })}
+                      onClick={() => deleteEndereco.mutate(e.id)}
                       className="text-destructive hover:text-destructive hover:bg-destructive/10"
                     >
                       <X className="size-4" />

@@ -5,9 +5,9 @@ import { Boxes, Heart, MapPin, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
-import { DemandasTab } from "@/features/demanda/components/DemandasTab";
-import { WishlistTab } from "@/features/demanda/components/WishlistTab";
-import { EnderecosTab } from "@/features/demanda/components/EnderecosTab";
+import { DemandasTab } from "@/features/demandas/components/DemandasTab";
+import { WishlistTab } from "@/features/wishlist/components/WishlistTab";
+import { EnderecosTab } from "@/features/enderecos/components/EnderecosTab";
 
 export const Route = createFileRoute("/")({
   component: DemandaPage,
