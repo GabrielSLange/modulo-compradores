@@ -31,8 +31,10 @@ export interface Demanda {
   id_usuario_criador: string;
   id_empresa_comprador: string;
   id_produto: string;       // projeção local — pode não estar sincronizada
-  id_endereco_entrega: string;
-  quantidade: number;
+  id_endereco_destino: string;
+  quantidade_desejada: number;
+  preco_maximo?: number;
+  prioridade: "baixa" | "media" | "alta";
   observacao?: string;
   status: DemandaStatus;
   is_recorrente: boolean;

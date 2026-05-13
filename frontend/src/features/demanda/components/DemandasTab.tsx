@@ -100,7 +100,7 @@ export function DemandasTab() {
                 <TableRow key={d.id} className="hover:bg-accent/40">
                   <TableCell className="font-mono text-xs">{d.id}</TableCell>
                   <TableCell><ProdutoCell id={d.id_produto} /></TableCell>
-                  <TableCell className="font-medium">{d.quantidade}</TableCell>
+                  <TableCell className="font-medium">{d.quantidade_desejada}</TableCell>
                   <TableCell>
                     {d.is_recorrente ? (
                       <span className="inline-flex items-center gap-1 rounded-full bg-secondary/15 px-2 py-0.5 text-xs font-medium text-secondary border border-secondary/30">

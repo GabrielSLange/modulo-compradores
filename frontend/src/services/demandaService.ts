@@ -63,10 +63,10 @@ export async function adicionarWishlist(
 
 export async function converterWishlist(
   id: string,
-  id_endereco_entrega: string,
+  id_endereco_destino: string,
 ): Promise<Demanda> {
   return await api.post<Demanda>(`/api/demandas/wishlist/${id}/converter`, {
-    id_endereco_entrega,
+    id_endereco_destino,
   });
 }
 
@@ -84,7 +84,7 @@ export async function getProdutos(id?: string): Promise<Produto | Produto[]> {
   if (id) {
     // Busca um produto específico
     try {
-      return await api.get<Produto>(`/api/produtos/${id}`);
+      return await api.get<Produto>(`/api/demandas/produtos/projecao/${id}`);
     } catch (error) {
       console.error(`[Produtos] Falha ao buscar produto com id ${id}`, error);
       // Re-lança o erro para que o chamador (ex: TanStack Query) possa tratá-lo
@@ -93,7 +93,7 @@ export async function getProdutos(id?: string): Promise<Produto | Produto[]> {
   } else {
     // Lista todos os produtos
     try {
-      return await api.get<Produto[]>("/api/produtos");
+      return await api.get<Produto[]>("/api/demandas/produtos/projecao");
     } catch (error) {
       console.warn("[Produtos] Falha ao buscar produtos", error);
       return []; // IMPORTANTE: não quebra UI em listagens

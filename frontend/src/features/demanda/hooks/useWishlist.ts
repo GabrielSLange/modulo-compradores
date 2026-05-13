@@ -28,8 +28,8 @@ export function useAddWishlist() {
 export function useConvertWishlist() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, id_endereco_entrega }: { id: string; id_endereco_entrega: string }) =>
-      converterWishlist(id, id_endereco_entrega),
+    mutationFn: ({ id, id_endereco_destino }: { id: string; id_endereco_destino: string }) =>
+      converterWishlist(id, id_endereco_destino),
     onSuccess: () => {
       toast.success("Wishlist convertida em demanda", { description: "Evento wishlist_convertida_em_demanda publicado." });
       qc.invalidateQueries({ queryKey: KEY });

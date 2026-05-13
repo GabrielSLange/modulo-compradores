@@ -25,8 +25,10 @@ import type { RecorrenciaFrequencia } from "../types";
 const schema = z
   .object({
     id_produto: z.string().min(1, "Selecione um produto"),
-    id_endereco_entrega: z.string().min(1, "Selecione um endereço"),
-    quantidade: z.coerce.number().int().positive("Mín. 1"),
+    id_endereco_destino: z.string().min(1, "Selecione um endereço"),
+    quantidade_desejada: z.coerce.number().int().positive("Mín. 1"),
+    prioridade: z.enum(["baixa", "media", "alta"]),
+    preco_maximo: z.coerce.number().optional(),
     observacao: z.string().optional(),
     is_recorrente: z.boolean(),
     frequencia: z.enum(["diaria", "semanal", "mensal"]).optional(),
@@ -51,7 +53,7 @@ export function NovaDemandaDialog() {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { is_recorrente: false, quantidade: 1 },
+    defaultValues: { is_recorrente: false, quantidade_desejada: 1, prioridade: "media" },
   });
 
   const isRec = form.watch("is_recorrente");
@@ -61,8 +63,10 @@ export function NovaDemandaDialog() {
       id_usuario_criador: "u-1",          // mock JWT
       id_empresa_comprador: "emp-1",      // mock JWT
       id_produto: v.id_produto,
-      id_endereco_entrega: v.id_endereco_entrega,
-      quantidade: v.quantidade,
+      id_endereco_destino: v.id_endereco_destino,
+      quantidade_desejada: v.quantidade_desejada,
+      prioridade: v.prioridade,
+      preco_maximo: v.preco_maximo,
       observacao: v.observacao,
       is_recorrente: v.is_recorrente,
       recorrencia: v.is_recorrente
@@ -74,7 +78,7 @@ export function NovaDemandaDialog() {
           }
         : undefined,
     });
-    form.reset({ is_recorrente: false, quantidade: 1 });
+    form.reset({ is_recorrente: false, quantidade_desejada: 1, prioridade: "media" });
     setOpen(false);
   });
 
@@ -128,7 +132,7 @@ export function NovaDemandaDialog() {
           <div className="col-span-2 sm:col-span-1 space-y-1.5">
             <Label>Endereço de entrega *</Label>
             <Select
-              onValueChange={(v) => form.setValue("id_endereco_entrega", v, { shouldValidate: true })}
+              onValueChange={(v) => form.setValue("id_endereco_destino", v, { shouldValidate: true })}
               disabled={isLoadingEnderecos || isErrorEnderecos}
             >
               <SelectTrigger>
@@ -151,14 +155,26 @@ export function NovaDemandaDialog() {
                 ))}
               </SelectContent>
             </Select>
-            {form.formState.errors.id_endereco_entrega && (
-              <p className="text-xs text-destructive">{form.formState.errors.id_endereco_entrega.message}</p>
+            {form.formState.errors.id_endereco_destino && (
+              <p className="text-xs text-destructive">{form.formState.errors.id_endereco_destino.message}</p>
             )}
           </div>
 
           <div className="col-span-2 sm:col-span-1 space-y-1.5">
             <Label>Quantidade *</Label>
-            <Input type="number" min={1} {...form.register("quantidade")} />
+            <Input type="number" min={1} {...form.register("quantidade_desejada")} />
+          </div>
+
+          <div className="col-span-2 sm:col-span-1 space-y-1.5">
+            <Label>Prioridade *</Label>
+            <Select onValueChange={(v) => form.setValue("prioridade", v as "baixa"|"media"|"alta", { shouldValidate: true })} defaultValue="media">
+              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="baixa">Baixa</SelectItem>
+                <SelectItem value="media">Média</SelectItem>
+                <SelectItem value="alta">Alta</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="col-span-2 sm:col-span-1 flex items-center justify-between rounded-md border border-input bg-muted/40 px-3 py-2">

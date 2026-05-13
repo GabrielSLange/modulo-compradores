@@ -210,7 +210,7 @@ export function WishlistTab() {
               className="bg-secondary text-secondary-foreground hover:bg-secondary/90"
               onClick={async () => {
                 if (!convertId || !endereco) return;
-                await convert.mutateAsync({ id: convertId, id_endereco_entrega: endereco });
+                await convert.mutateAsync({ id: convertId, id_endereco_destino: endereco });
                 setConvertId(null);
               }}
             >

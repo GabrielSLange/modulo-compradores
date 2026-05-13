@@ -11,7 +11,7 @@ export function useProdutos() {
     // A chave "produtos" é usada para cachear a lista completa.
     queryKey: ["produtos"],
     // Chama a nova função getProdutos SEM passar um ID.
-    queryFn: getProdutos,
+    queryFn: () => getProdutos(),
     // Opcional: produtos não mudam com frequência, então podemos
     // manter os dados em cache por mais tempo (ex: 5 minutos).
     staleTime: 1000 * 60 * 5,
