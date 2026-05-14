@@ -59,7 +59,8 @@ app = FastAPI(
     title="Módulo de Demanda - Portal B2B",
     description="Microsserviço responsável pelo registro de intenções de compra",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
+    root_path="/api/demandas" # Esta linha resolve o erro do Swagger no servidor
 )
 
 app.add_middleware(
