@@ -1,16 +1,21 @@
-FROM node:20-alpine AS build
+FROM node:20-alpine
 
 WORKDIR /app
 
+# Copia os arquivos de dependência
 COPY package*.json ./
+
+# Instala todas as dependências (Vite e plugins são necessários para o preview)
 RUN npm install
 
+# Copia o restante do código
 COPY . .
+
+# Faz o build do projeto (TanStack Start gera dist/client e dist/server)
 RUN npm run build
 
-FROM nginx:alpine
+# O frontend responde na porta 8084
+EXPOSE 8084
 
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /app/dist /usr/share/nginx/html
-
-EXPOSE 80
+# Inicia o servidor Node/Vite configurado para SSR/Cloudflare localmente
+CMD ["npm", "run", "preview", "--", "--host", "0.0.0.0", "--port", "8084"]
