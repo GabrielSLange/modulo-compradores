@@ -21,7 +21,7 @@ def get_db():
 class ProdutoProjecaoDTO(BaseModel):
     """
     Projeção local do produto — espelha o tipo ProdutoProjecao do frontend.
-    Alimentada exclusivamente pelo consumidor Kafka (tópico sdi.produto.events).
+    Alimentada exclusivamente pelo consumidor Kafka (tópico produto_cadastrado).
     """
     id: str = Field(validation_alias="id_produto")
     codigo: str
@@ -54,7 +54,7 @@ def get_produto_projecao(
     Retorna a projeção local de produto(s) a partir do cache Kafka.
     - Sem id_produto: retorna todos os produtos do cache.
     - Com id_produto: retorna o produto específico (404 se não encontrado).
-    Alimentado exclusivamente pelo consumidor Kafka (tópico sdi.produto.events).
+    Alimentado exclusivamente pelo consumidor Kafka (tópico produto_cadastrado).
     """
     if id_produto is None:
         return db.query(ProdutoCache).all()

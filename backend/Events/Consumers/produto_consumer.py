@@ -3,7 +3,7 @@ produto_consumer.py
 ===================
 Consumidor Kafka para o Módulo de Compradores (Equipe 4).
 
-Inscreve-se no tópico 'sdi.produto.events' publicado pelo microsserviço
+Inscreve-se no tópico 'produto_cadastrado' publicado pelo microsserviço
 SDI.Micro.Produto (Equipe 2) e mantém a tabela local 'produto_cache' atualizada.
 
 Formato do envelope esperado (conforme README da Equipe 2):
@@ -42,7 +42,7 @@ logger = logging.getLogger("produto_consumer")
 # Constantes / variáveis de ambiente
 # ---------------------------------------------------------------------------
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
-KAFKA_TOPIC_PRODUTOS = os.getenv("KAFKA_TOPIC_PRODUTOS", "sdi.produto.events")
+KAFKA_TOPIC_PRODUTOS = os.getenv("KAFKA_TOPIC_PRODUTOS", "produto_cadastrado")
 KAFKA_GROUP_ID = os.getenv("KAFKA_GROUP_ID_COMPRADORES", "modulo-compradores-grupo")
 
 # Eventos de produto que este consumidor processa

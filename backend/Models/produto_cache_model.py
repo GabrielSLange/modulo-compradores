@@ -17,7 +17,7 @@ class ProdutoCache(Base):
     Espelho local (cache) dos produtos publicados pelo catálogo (Equipe 2).
 
     Alimentado exclusivamente pelo consumidor Kafka que escuta o tópico
-    'sdi.produto.events'. Não deve ser alterado manualmente via API deste módulo.
+    'produto_cadastrado'. Não deve ser alterado manualmente via API deste módulo.
     """
 
     __tablename__ = "produto_cache"

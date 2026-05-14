@@ -3,7 +3,7 @@ produtor_teste_produto.py
 =========================
 Simulador do microsserviço SDI.Micro.Produto (Equipe 2).
 
-Publica eventos no tópico 'sdi.produto.events' do Redpanda local
+Publica eventos no tópico 'produto_cadastrado' do Redpanda local
 usando o mesmo formato de envelope documentado no README da Equipe 2.
 
 Como usar (com o venv ativado):
@@ -24,7 +24,7 @@ from confluent_kafka.admin import AdminClient, NewTopic
 # Configuração
 # ---------------------------------------------------------------------------
 BOOTSTRAP_SERVERS = "localhost:9092"
-TOPICO = "sdi.produto.events"
+TOPICO = "produto_cadastrado"
 
 
 # ---------------------------------------------------------------------------
