@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from sqlalchemy import Column, String, Numeric, Boolean, DateTime
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from Data.database import Base # Importa a Base do seu "DbContext"
+from Data.database import Base
 import uuid
 
 class EnderecoEntrega(Base):
@@ -24,5 +24,8 @@ class EnderecoEntrega(Base):
     data_criacao = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     atualizado_em = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
 
-    # Usamos string "Demanda" para evitar erro de importação circular no Python
+    # Relacionamento restaurado para corrigir o erro do back_populates
     demandas = relationship("Demanda", back_populates="endereco")
+
+    def __repr__(self) -> str:
+        return f"<EnderecoEntrega id={self.id_endereco} empresa={self.id_empresa}>"

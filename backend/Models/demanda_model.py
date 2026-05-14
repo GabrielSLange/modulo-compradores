@@ -1,6 +1,5 @@
 from datetime import datetime, timezone
-
-from sqlalchemy import Column, String, Numeric, Boolean, DateTime, Date, ForeignKey, Text
+from sqlalchemy import Column, String, Numeric, Boolean, DateTime, ForeignKey, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from Data.database import Base
@@ -13,7 +12,10 @@ class Demanda(Base):
     id_empresa_comprador = Column(String, nullable=False)
     id_usuario_criador = Column(String, nullable=False)
     id_produto = Column(String, nullable=False)
-    id_endereco_destino = Column(String, ForeignKey("endereco_entrega.id_endereco"), nullable=False)
+    
+    # nullable=True adicionado para aceitar a demanda sem endereço do seed.py
+    id_endereco_destino = Column(String, ForeignKey("endereco_entrega.id_endereco"), nullable=True)
+    
     quantidade_desejada = Column(Numeric(12, 3), nullable=False)
     preco_maximo = Column(Numeric(12, 2), nullable=True)
     prioridade = Column(String(10), nullable=False)
@@ -23,7 +25,6 @@ class Demanda(Base):
     data_criacao = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     atualizado_em = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
 
-    # Relacionamentos usando o nome da classe em String
     endereco = relationship("EnderecoEntrega", back_populates="demandas")
     recorrencia = relationship("DemandaRecorrencia", back_populates="demanda", uselist=False)
     wishlist_items = relationship("WishlistItem", back_populates="demanda_gerada")

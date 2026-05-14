@@ -3,7 +3,6 @@ from typing import Optional
 from datetime import datetime
 
 class EnderecoResponseDTO(BaseModel):
-    # validation_alias: lê model.id_endereco e serializa como "id"
     id: str = Field(validation_alias="id_endereco")
     id_empresa: str
     apelido: Optional[str] = None
@@ -16,6 +15,7 @@ class EnderecoResponseDTO(BaseModel):
     cep: str
     ativo: bool
     data_criacao: Optional[datetime] = None
+    atualizado_em: Optional[datetime] = None
 
     model_config = {
         "from_attributes": True,

@@ -1,15 +1,10 @@
-"""
-seed.py - Popula o banco SQLite local com dados de exemplo.
-Execute com o backend PARADO: python seed.py
-"""
 import sys
 import io
-# Garante UTF-8 no terminal Windows
+import uuid
+from datetime import datetime, timezone, timedelta
+
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
-import uuid
-
-from datetime import datetime, timezone, timedelta
 from Data.database import Base, engine, SessionLocal
 from Models import (
     endereco_entrega_model,
@@ -19,10 +14,8 @@ from Models import (
     produto_cache_model,
 )
 
-# ─── IDs fixos para facilitar testes ─────────────────────────────────────────
-
-ID_EMPRESA   = "empresa-001"
-ID_USUARIO   = "usuario-001"
+ID_EMPRESA   = "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+ID_USUARIO   = "550e8400-e29b-41d4-a716-446655440000"
 
 ID_PROD_1    = str(uuid.uuid4())
 ID_PROD_2    = str(uuid.uuid4())
@@ -40,76 +33,69 @@ ID_WISH_2    = str(uuid.uuid4())
 
 now = datetime.now(timezone.utc)
 
-# ─── Recria as tabelas ────────────────────────────────────────────────────────
-
-print("🗑️  Recriando tabelas...")
+print("Recriando as tabelas no banco de dados...")
 Base.metadata.drop_all(bind=engine)
 Base.metadata.create_all(bind=engine)
 
 db = SessionLocal()
 
 try:
-    # ── 1. Produto Cache (normalmente alimentado pelo Kafka) ──────────────────
-    print("📦 Inserindo produtos no cache...")
+    print("Inserindo produtos no cache...")
     db.add_all([
         produto_cache_model.ProdutoCache(
             id_produto=ID_PROD_1,
             codigo="NOTE-001",
-            nome="Notebook Dell Inspiron 15",
+            nome="Notebook Dell Inspiron",
             ativo=True,
-            sincronizado_em=now,
+            sincronizado_em=now
         ),
         produto_cache_model.ProdutoCache(
             id_produto=ID_PROD_2,
-            codigo="CADM-002",
-            nome="Cadeira de Escritório Ergonômica",
+            codigo="MON-002",
+            nome="Monitor LG 29 Ultrawide",
             ativo=True,
-            sincronizado_em=now,
+            sincronizado_em=now
         ),
         produto_cache_model.ProdutoCache(
             id_produto=ID_PROD_3,
-            codigo="PAPE-003",
-            nome="Papel A4 Resma 500 Folhas",
-            ativo=True,
-            sincronizado_em=now,
+            codigo="TEC-003",
+            nome="Teclado Mecânico Keychron",
+            ativo=False,
+            sincronizado_em=now
         ),
     ])
 
-    # ── 2. Endereços de entrega ───────────────────────────────────────────────
-    print("📍 Inserindo endereços...")
+    print("Inserindo enderecos de entrega...")
     db.add_all([
         endereco_entrega_model.EnderecoEntrega(
             id_endereco=ID_END_1,
             id_empresa=ID_EMPRESA,
+            apelido="Sede Matriz",
             logradouro="Avenida Paulista",
             numero="1000",
-            complemento="Andar 10",
+            complemento="Andar 5",
             bairro="Bela Vista",
-            cidade="São Paulo",
+            cidade="Sao Paulo",
             estado="SP",
-            cep="01310-100",
+            cep="01310100",
             ativo=True,
-            data_criacao=now - timedelta(days=30),
-            atualizado_em=now,
         ),
         endereco_entrega_model.EnderecoEntrega(
             id_endereco=ID_END_2,
             id_empresa=ID_EMPRESA,
-            logradouro="Rua XV de Novembro",
+            apelido="Filial Goiania",
+            logradouro="Avenida T-63",
             numero="320",
-            complemento=None,
-            bairro="Centro",
-            cidade="Curitiba",
-            estado="PR",
-            cep="80020-310",
+            complemento="Sala 12",
+            bairro="Setor Bueno",
+            cidade="Goiania",
+            estado="GO",
+            cep="74230100",
             ativo=True,
-            data_criacao=now - timedelta(days=15),
-            atualizado_em=now,
         ),
     ])
 
-    # ── 3. Demandas ───────────────────────────────────────────────────────────
-    print("📋 Inserindo demandas...")
+    print("Inserindo demandas...")
     db.add_all([
         demanda_model.Demanda(
             id_demanda=ID_DEM_1,
@@ -117,14 +103,13 @@ try:
             id_usuario_criador=ID_USUARIO,
             id_produto=ID_PROD_1,
             id_endereco_destino=ID_END_1,
-            quantidade_desejada=5,
-            preco_maximo=None,
+            quantidade_desejada=10,
             prioridade="alta",
-            is_recorrente=False,
             status="aberta",
-            observacoes="Urgente para o projeto Alfa",
-            data_criacao=now - timedelta(days=10),
-            atualizado_em=now - timedelta(days=10),
+            observacoes="Aguardando aprovacao de orcamento",
+            is_recorrente=False,
+            data_criacao=now - timedelta(days=2),
+            atualizado_em=now - timedelta(days=2),
         ),
         demanda_model.Demanda(
             id_demanda=ID_DEM_2,
@@ -132,34 +117,45 @@ try:
             id_usuario_criador=ID_USUARIO,
             id_produto=ID_PROD_2,
             id_endereco_destino=ID_END_2,
-            quantidade_desejada=10,
-            preco_maximo=800.00,
+            quantidade_desejada=5,
             prioridade="media",
-            is_recorrente=True,
             status="em_negociacao",
-            observacoes="Negociar frete grátis",
+            observacoes=None,
+            is_recorrente=True,
             data_criacao=now - timedelta(days=5),
-            atualizado_em=now - timedelta(days=2),
+            atualizado_em=now - timedelta(days=1),
         ),
         demanda_model.Demanda(
             id_demanda=ID_DEM_3,
             id_empresa_comprador=ID_EMPRESA,
             id_usuario_criador=ID_USUARIO,
             id_produto=ID_PROD_3,
-            id_endereco_destino=ID_END_1,
-            quantidade_desejada=50,
-            preco_maximo=None,
+            id_endereco_destino=None,
+            quantidade_desejada=2,
             prioridade="baixa",
-            is_recorrente=False,
             status="atendida",
-            observacoes="Entregue no prazo",
-            data_criacao=now - timedelta(days=20),
-            atualizado_em=now - timedelta(days=1),
+            observacoes="Pedido finalizado",
+            is_recorrente=False,
+            data_criacao=now - timedelta(days=10),
+            atualizado_em=now - timedelta(days=8),
         ),
     ])
 
-    # ── 4. Wishlist ───────────────────────────────────────────────────────────
-    print("⭐ Inserindo wishlist...")
+    print("Inserindo configuracoes de recorrencia...")
+    db.add_all([
+        demanda_recorrencia_model.DemandaRecorrencia(
+            id_recorrencia=str(uuid.uuid4()),
+            id_demanda=ID_DEM_2,
+            frequencia="mensal",
+            quantidade_por_periodo=5,
+            data_inicio=now.date(),
+            data_fim=None,
+            dia_preferencial="15",
+            ativa=True
+        )
+    ])
+
+    print("Inserindo itens na wishlist...")
     db.add_all([
         wishlist_item_model.WishlistItem(
             id_item=ID_WISH_1,
@@ -192,17 +188,12 @@ try:
     ])
 
     db.commit()
-    print("\n✅ Seed concluído com sucesso!")
-    print(f"   🏢 Empresa ID  : {ID_EMPRESA}")
-    print(f"   👤 Usuário ID  : {ID_USUARIO}")
-    print(f"   📦 Produtos    : 3")
-    print(f"   📍 Endereços   : 2")
-    print(f"   📋 Demandas    : 3  (aberta / em_negociacao / atendida)")
-    print(f"   ⭐ Wishlist    : 2  (1 pendente, 1 convertida)")
+    print("Seed concluido com sucesso!")
+    print(f"Empresa ID  : {ID_EMPRESA}")
+    print(f"Usuario ID  : {ID_USUARIO}")
 
 except Exception as e:
     db.rollback()
-    print(f"\n❌ Erro durante o seed: {e}")
-    raise
+    print(f"Erro ao executar seed: {e}")
 finally:
     db.close()

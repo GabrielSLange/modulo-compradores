@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
+from uuid import UUID  # Importação adicionada para corrigir o NameError
 
 from Data.database import SessionLocal
 from Models.produto_cache_model import ProdutoCache
@@ -23,7 +24,7 @@ class ProdutoProjecaoDTO(BaseModel):
     Projeção local do produto — espelha o tipo ProdutoProjecao do frontend.
     Alimentada exclusivamente pelo consumidor Kafka (tópico produto_cadastrado).
     """
-    id: str = Field(validation_alias="id_produto")
+    id: UUID = Field(validation_alias="id_produto")
     codigo: str
     nome: str
     # categoria e unidade não existem no ProdutoCache local —
@@ -54,16 +55,23 @@ def get_produto_projecao(
     Retorna a projeção local de produto(s) a partir do cache Kafka.
     - Sem id_produto: retorna todos os produtos do cache.
     - Com id_produto: retorna o produto específico (404 se não encontrado).
-    Alimentado exclusivamente pelo consumidor Kafka (tópico produto_cadastrado).
+    Alimentado exclusivamente pelo consumidor Kafka (tópicos de produtos).
     """
     if id_produto is None:
         return db.query(ProdutoCache).all()
+
+    # Tratamento para evitar erro de sintaxe UUID caso o frontend envie a string "null"
+    if id_produto == "null":
+         raise HTTPException(
+            status_code=400,
+            detail="ID de produto inválido (recebido string 'null')."
+        )
 
     produto = db.query(ProdutoCache).filter(ProdutoCache.id_produto == id_produto).first()
     if not produto:
         raise HTTPException(
             status_code=404,
-            detail=f"Produto '{id_produto}' não encontrado no cache local. "
-                   "Aguarde a sincronização via Kafka ou publique o evento de produto.",
+            detail="Produto não encontrado no cache local do Módulo de Compradores."
         )
+
     return produto

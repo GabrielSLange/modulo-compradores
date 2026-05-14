@@ -1,5 +1,4 @@
 import { api } from "./api";
-import type { ProdutoProjecao } from "@/features/types";
 
 export type Produto = {
   id: string;
@@ -7,6 +6,7 @@ export type Produto = {
   codigo?: string;
   categoria?: string;
   unidade?: string;
+  sincronizado_em?: string; // Adicionado para espelhar o backend
 };
 
 export async function getProdutos(): Promise<Produto[]>;

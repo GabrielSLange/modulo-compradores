@@ -17,7 +17,7 @@ export default defineConfig({
     server: {
       proxy: {
         "/api/demandas": {
-          target: "http://127.0.0.1:5004",
+          target: "http://demanda-service:5004",
           rewrite: (path) => path.replace(/^\/api\/demandas/, ""),
         },
       },
