@@ -12,7 +12,7 @@ RUN npm install
 COPY . .
 
 # Faz o build do projeto (TanStack Start gera dist/client e dist/server)
-RUN npm run build
+RUN npm run build && cp /app/dist/server/index.js /app/dist/server/server.js
 
 # O frontend responde na porta 8084
 EXPOSE 8084
