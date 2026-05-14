@@ -17,7 +17,7 @@ services:
     container_name: demanda-front
     restart: unless-stopped
     ports:
-      - "8084:80"
+      - "8084:8084"
     depends_on:
       - demanda-service
     networks:
