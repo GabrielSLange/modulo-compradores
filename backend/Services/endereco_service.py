@@ -1,10 +1,11 @@
 from sqlalchemy.orm import Session
 from Models.endereco_entrega_model import EnderecoEntrega
 from DTOs.Request.endereco_create_dto import EnderecoCreateDTO
+from DTOs.Response.endereco_response_dto import EnderecoResponseDTO
 
 class EnderecoService:
     @staticmethod
-    def criar_endereco(db: Session, dto: EnderecoCreateDTO):
+    def criar_endereco(db: Session, dto: EnderecoCreateDTO) -> EnderecoResponseDTO:
         novo_endereco = EnderecoEntrega(
             id_empresa=dto.id_empresa,
             apelido=dto.apelido,
@@ -22,10 +23,10 @@ class EnderecoService:
         db.add(novo_endereco)
         db.commit()
         db.refresh(novo_endereco)
-        return novo_endereco
+        return EnderecoResponseDTO.model_validate(novo_endereco)
 
     @staticmethod
-    def atualizar_endereco(db: Session, id_endereco: str, dto: EnderecoCreateDTO):
+    def atualizar_endereco(db: Session, id_endereco: str, dto: EnderecoCreateDTO) -> EnderecoResponseDTO | None:
         endereco = db.query(EnderecoEntrega).filter(
             EnderecoEntrega.id_endereco == id_endereco,
             EnderecoEntrega.id_empresa == dto.id_empresa,
@@ -48,18 +49,18 @@ class EnderecoService:
 
         db.commit()
         db.refresh(endereco)
-        return endereco
+        return EnderecoResponseDTO.model_validate(endereco)
 
     @staticmethod
-    def listar_enderecos_da_empresa(db: Session, id_empresa: str | None = None):
+    def listar_enderecos_da_empresa(db: Session, id_empresa: str | None = None) -> list[EnderecoResponseDTO]:
         # TODO: quando JWT for implementado, id_empresa sempre virá do token — remover o None.
         query = db.query(EnderecoEntrega).filter(EnderecoEntrega.ativo.is_(True))
         if id_empresa:
             query = query.filter(EnderecoEntrega.id_empresa == id_empresa)
-        return query.all()
+        return [EnderecoResponseDTO.model_validate(e) for e in query.all()]
 
     @staticmethod
-    def deletar_endereco_soft(db: Session, id_endereco: str, id_empresa: str):
+    def deletar_endereco_soft(db: Session, id_endereco: str, id_empresa: str) -> bool | None:
         # Busca o endereço garantindo que ele pertence à empresa que está pedindo a exclusão
         endereco = db.query(EnderecoEntrega).filter(
             EnderecoEntrega.id_endereco == id_endereco,
@@ -72,4 +73,4 @@ class EnderecoService:
         # Realiza o Soft Delete
         endereco.ativo = False
         db.commit()
-        return True
+        return True

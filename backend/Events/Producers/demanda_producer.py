@@ -7,7 +7,7 @@ from confluent_kafka import Producer
 class DemandaProducer:
     @staticmethod
     def _obter_produtor():
-        servidor_kafka = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
+        servidor_kafka = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "10.128.0.2:9092,10.128.0.3:9092,10.128.0.4:9092")
         conf = {
             'bootstrap.servers': servidor_kafka,
             'client.id': 'modulo-compradores'

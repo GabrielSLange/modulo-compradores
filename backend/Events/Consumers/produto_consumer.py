@@ -7,13 +7,11 @@ from Models.produto_cache_model import ProdutoCache
 
 logger = logging.getLogger("produto_consumer")
 
-KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
+KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "10.128.0.2:9092,10.128.0.3:9092,10.128.0.4:9092")
 GROUP_ID = os.getenv("KAFKA_GROUP_ID_COMPRADORES", "modulo-compradores-grupo")
 
 TOPICOS_PRODUTOS = [
-    "produto_cadastrado",
-    "produto_atualizado",
-    "produto_status_alterado"
+    "produto_cadastrado"
 ]
 
 def _upsert_produto(payload: dict):

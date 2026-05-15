@@ -2,8 +2,8 @@ from confluent_kafka import Consumer, KafkaError
 import os
 
 def iniciar_consumidor():
-    servidor_kafka = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
-    topico = "evento_demanda_criada"
+    servidor_kafka = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "10.128.0.2:9092,10.128.0.3:9092,10.128.0.4:9092")
+    topico = "demanda_criada"
 
     # Configuração de quem está lendo
     conf = {

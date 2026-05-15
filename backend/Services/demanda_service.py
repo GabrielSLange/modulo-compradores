@@ -2,12 +2,13 @@ from sqlalchemy.orm import Session
 from Models.demanda_model import Demanda
 from Models.demanda_recorrencia_model import DemandaRecorrencia
 from DTOs.Request.demanda_create_dto import DemandaCreateDTO
+from DTOs.Response.demanda_response_dto import DemandaResponseDTO
 from Events.Producers.demanda_producer import DemandaProducer
 from sqlalchemy import desc
 
 class DemandaService:
     @staticmethod
-    def criar_demanda(db: Session, dto: DemandaCreateDTO):
+    def criar_demanda(db: Session, dto: DemandaCreateDTO) -> DemandaResponseDTO:
         # 1. Cria a Demanda (A Raiz)
         nova_demanda = Demanda(
             id_empresa_comprador=dto.id_empresa_comprador,
@@ -51,18 +52,19 @@ class DemandaService:
         }
         DemandaProducer.publicar_demanda_criada(nova_demanda.id_demanda, payload_evento)
 
-        return nova_demanda
+        return DemandaResponseDTO.model_validate(nova_demanda)
     
     @staticmethod
-    def listar_demandas_da_empresa(db: Session, id_empresa: str | None = None):
+    def listar_demandas_da_empresa(db: Session, id_empresa: str | None = None) -> list[DemandaResponseDTO]:
         # TODO: quando JWT for implementado, id_empresa sempre virá do token — remover o None.
         query = db.query(Demanda)
         if id_empresa:
             query = query.filter(Demanda.id_empresa_comprador == id_empresa)
-        return query.order_by(desc(Demanda.data_criacao)).all()
+        demandas = query.order_by(desc(Demanda.data_criacao)).all()
+        return [DemandaResponseDTO.model_validate(d) for d in demandas]
 
     @staticmethod
-    def atualizar_status(db: Session, id_demanda: str, novo_status: str):
+    def atualizar_status(db: Session, id_demanda: str, novo_status: str) -> DemandaResponseDTO:
         demanda = db.query(Demanda).filter(Demanda.id_demanda == id_demanda).first()
         if not demanda:
             raise ValueError(f"Demanda {id_demanda} não encontrada.")
@@ -81,4 +83,4 @@ class DemandaService:
             # Aqui no futuro chamaremos algo como DemandaProducer.publicar_demanda_cancelada
             pass
             
-        return demanda
+        return DemandaResponseDTO.model_validate(demanda)

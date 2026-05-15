@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 def iniciar_consumidor_pedidos():
     conf = {
-        'bootstrap.servers': os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'localhost:9092'),
+        'bootstrap.servers': os.getenv('KAFKA_BOOTSTRAP_SERVERS', '10.128.0.2:9092,10.128.0.3:9092,10.128.0.4:9092'),
         'group.id': 'modulo_compradores_pedidos',
         'auto.offset.reset': 'earliest'
     }

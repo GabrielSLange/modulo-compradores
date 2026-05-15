@@ -58,7 +58,8 @@ def get_produto_projecao(
     Alimentado exclusivamente pelo consumidor Kafka (tópicos de produtos).
     """
     if id_produto is None:
-        return db.query(ProdutoCache).all()
+        produtos = db.query(ProdutoCache).all()
+        return [ProdutoProjecaoDTO.model_validate(p) for p in produtos]
 
     # Tratamento para evitar erro de sintaxe UUID caso o frontend envie a string "null"
     if id_produto == "null":
@@ -74,4 +75,4 @@ def get_produto_projecao(
             detail="Produto não encontrado no cache local do Módulo de Compradores."
         )
 
-    return produto
+    return ProdutoProjecaoDTO.model_validate(produto)

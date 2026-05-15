@@ -1,15 +1,14 @@
+import os
 import json
 import uuid
 from datetime import datetime, timezone
 from confluent_kafka import Producer
 from confluent_kafka.admin import AdminClient, NewTopic
 
-BOOTSTRAP_SERVERS = "localhost:9092"
+BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "10.128.0.2:9092,10.128.0.3:9092,10.128.0.4:9092")
 
 TOPICOS = [
-    "produto_cadastrado",
-    "produto_atualizado",
-    "produto_status_alterado"
+    "produto_cadastrado"
 ]
 
 def garantir_topicos() -> None:
@@ -30,7 +29,7 @@ def garantir_topicos() -> None:
             except Exception as e:
                 print(f"Erro ao criar topico '{t}': {e}")
     else:
-        print("Todos os topicos ja existem no Redpanda.")
+        print("Todos os topicos ja existem no Kafka.")
 
 def delivery_report(err, msg):
     if err is not None:
@@ -69,36 +68,6 @@ EVENTOS = [
             "ativo": True,
             "dataCadastro": _get_iso_now(),
             "ultimaAlteracao": None
-        }
-    ),
-    (
-        "produto_atualizado",
-        {
-            "id": id_produto_teste,
-            "transporteId": str(uuid.uuid4()),
-            "categoriaId": str(uuid.uuid4()),
-            "unidadeMedidaId": str(uuid.uuid4()),
-            "codigo": "1234",
-            "nome": "Produto Teste 124 Atualizado",
-            "descricao": "Descricao do produto 4324 alterada",
-            "ativo": True,
-            "dataCadastro": _get_iso_now(),
-            "ultimaAlteracao": _get_iso_now()
-        }
-    ),
-    (
-        "produto_status_alterado",
-        {
-            "id": id_produto_teste,
-            "transporteId": str(uuid.uuid4()),
-            "categoriaId": str(uuid.uuid4()),
-            "unidadeMedidaId": str(uuid.uuid4()),
-            "codigo": "1234",
-            "nome": "Produto Teste 124 Atualizado",
-            "descricao": "Descricao do produto 4324 alterada",
-            "ativo": False,
-            "dataCadastro": _get_iso_now(),
-            "ultimaAlteracao": _get_iso_now()
         }
     )
 ]

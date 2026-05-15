@@ -18,6 +18,12 @@ Abra o terminal (PowerShell ou CMD) na pasta de sua preferencia e execute:
 git clone https://github.com/GabrielSLange/modulo-compradores.git
 cd modulo-compradores
 
+### Configurando Variáveis de Ambiente
+
+Crie o seu arquivo `.env` na raiz do projeto copiando o `.env.example`.
+O projeto **já está configurado para apontar para o cluster Kafka compartilhado** oficial.
+**Atenção:** Não envie o seu `.env` com senhas reais para o GitHub.
+
 ---
 
 ## Passo 2: Configurando o Backend (Python + FastAPI)
