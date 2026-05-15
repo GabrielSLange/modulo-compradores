@@ -21,9 +21,10 @@ export interface EnderecoEntrega {
 
 export interface DemandaRecorrencia {
   frequencia: RecorrenciaFrequencia;
+  quantidade_por_periodo?: number;
   data_inicio: string;      // ISO date
   data_fim?: string;        // ISO date
-  dia_preferencial: number; // 1..31 (mensal) ou 1..7 (semanal) ou 1 (diária)
+  dia_preferencial: number | string; // 1..31 (mensal) ou 1..7 (semanal) ou 1 (diária)
 }
 
 export interface Demanda {

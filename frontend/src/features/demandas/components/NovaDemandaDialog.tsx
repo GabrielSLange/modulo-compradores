@@ -73,9 +73,10 @@ export function NovaDemandaDialog() {
       recorrencia: v.is_recorrente
         ? {
             frequencia: v.frequencia as RecorrenciaFrequencia,
+            quantidade_por_periodo: v.quantidade_desejada,
             data_inicio: v.data_inicio!,
             data_fim: v.data_fim || undefined,
-            dia_preferencial: v.dia_preferencial!,
+            dia_preferencial: String(v.dia_preferencial!),
           }
         : undefined,
     }, {
