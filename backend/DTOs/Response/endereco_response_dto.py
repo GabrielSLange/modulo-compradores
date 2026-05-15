@@ -1,10 +1,11 @@
 from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
+from uuid import UUID
 
 class EnderecoResponseDTO(BaseModel):
-    id: str = Field(validation_alias="id_endereco")
-    id_empresa: str
+    id: UUID = Field(validation_alias="id_endereco")
+    id_empresa: UUID
     apelido: Optional[str] = None
     logradouro: str
     numero: Optional[str] = None
