@@ -7,9 +7,11 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
+import { useEffect } from "react";
 
 import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
+import { getToken, setToken } from "@/services/auth";
 
 function NotFoundComponent() {
   return (
@@ -109,6 +111,22 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const jwt = params.get("jwt");
+
+    if (!jwt) return;
+
+    if (jwt !== getToken()) {
+      setToken(jwt);
+    }
+
+    params.delete("jwt");
+    const query = params.toString();
+    const nextUrl = `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`;
+    window.history.replaceState({}, "", nextUrl);
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
