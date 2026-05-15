@@ -6,6 +6,7 @@ from Data.database import SessionLocal
 from DTOs.Request.demanda_create_dto import DemandaCreateDTO
 from DTOs.Response.demanda_response_dto import DemandaResponseDTO
 from Services.demanda_service import DemandaService
+from Security.auth import get_current_empresa_id, get_current_usuario_id
 
 router = APIRouter()
 
@@ -18,10 +19,15 @@ def get_db():
         db.close()
 
 @router.post("/", response_model=DemandaResponseDTO, status_code=status.HTTP_201_CREATED)
-def criar_nova_demanda(demanda_dto: DemandaCreateDTO, db: Session = Depends(get_db)):
+def criar_nova_demanda(
+    demanda_dto: DemandaCreateDTO, 
+    db: Session = Depends(get_db),
+    id_empresa: str = Depends(get_current_empresa_id),
+    id_usuario: str = Depends(get_current_usuario_id)
+):
     try:
         # Entrega o DTO e a conexão do banco para o Service trabalhar
-        demanda_criada = DemandaService.criar_demanda(db, demanda_dto)
+        demanda_criada = DemandaService.criar_demanda(db, demanda_dto, id_empresa, id_usuario)
         return demanda_criada
     except ValueError as e:
         # Erros de regra de negócio geram 400 Bad Request
@@ -33,9 +39,7 @@ def criar_nova_demanda(demanda_dto: DemandaCreateDTO, db: Session = Depends(get_
 @router.get("/", response_model=List[DemandaResponseDTO])
 def listar_demandas(
     db: Session = Depends(get_db),
-    # TODO: quando o JWT for implementado, extrair id_empresa do token
-    # e remover este parâmetro opcional do query string.
-    id_empresa: Optional[str] = None,
+    id_empresa: str = Depends(get_current_empresa_id)
 ):
     try:
         demandas = DemandaService.listar_demandas_da_empresa(db, id_empresa)
@@ -44,22 +48,31 @@ def listar_demandas(
         raise HTTPException(status_code=500, detail=f"Erro ao buscar demandas: {str(e)}")
 
 @router.patch("/{id_demanda}/status", response_model=DemandaResponseDTO)
-def atualizar_status_demanda(id_demanda: str, payload: dict, db: Session = Depends(get_db)):
+def atualizar_status_demanda(
+    id_demanda: str, 
+    payload: dict, 
+    db: Session = Depends(get_db),
+    id_empresa: str = Depends(get_current_empresa_id)
+):
     try:
         novo_status = payload.get("status")
         if not novo_status:
             raise HTTPException(status_code=400, detail="O campo 'status' é obrigatório no corpo da requisição")
         
-        return DemandaService.atualizar_status(db, id_demanda, novo_status)
+        return DemandaService.atualizar_status(db, id_demanda, novo_status, id_empresa)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao atualizar status da demanda: {str(e)}")
 
 @router.patch("/{id_demanda}/cancelar", response_model=DemandaResponseDTO)
-def cancelar_demanda(id_demanda: str, db: Session = Depends(get_db)):
+def cancelar_demanda(
+    id_demanda: str, 
+    db: Session = Depends(get_db),
+    id_empresa: str = Depends(get_current_empresa_id)
+):
     try:
-        return DemandaService.atualizar_status(db, id_demanda, "cancelada")
+        return DemandaService.atualizar_status(db, id_demanda, "cancelada", id_empresa)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

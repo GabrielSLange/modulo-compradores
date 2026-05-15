@@ -38,7 +38,7 @@ O projeto **já está configurado para apontar para o cluster Kafka compartilhad
    .\\venv\\Scripts\\activate
 
 4. Instale as dependencias necessarias:
-   pip install fastapi uvicorn pydantic sqlalchemy confluent_kafka apscheduler
+   pip install fastapi uvicorn pydantic sqlalchemy confluent_kafka apscheduler PyJWT
 
 5. Execute a API:
    python main.py

@@ -5,9 +5,9 @@ from DTOs.Response.endereco_response_dto import EnderecoResponseDTO
 
 class EnderecoService:
     @staticmethod
-    def criar_endereco(db: Session, dto: EnderecoCreateDTO) -> EnderecoResponseDTO:
+    def criar_endereco(db: Session, dto: EnderecoCreateDTO, id_empresa: str) -> EnderecoResponseDTO:
         novo_endereco = EnderecoEntrega(
-            id_empresa=dto.id_empresa,
+            id_empresa=id_empresa,
             apelido=dto.apelido,
             logradouro=dto.logradouro,
             numero=dto.numero,
@@ -26,10 +26,10 @@ class EnderecoService:
         return EnderecoResponseDTO.model_validate(novo_endereco)
 
     @staticmethod
-    def atualizar_endereco(db: Session, id_endereco: str, dto: EnderecoCreateDTO) -> EnderecoResponseDTO | None:
+    def atualizar_endereco(db: Session, id_endereco: str, dto: EnderecoCreateDTO, id_empresa: str) -> EnderecoResponseDTO | None:
         endereco = db.query(EnderecoEntrega).filter(
             EnderecoEntrega.id_endereco == id_endereco,
-            EnderecoEntrega.id_empresa == dto.id_empresa,
+            EnderecoEntrega.id_empresa == id_empresa,
             EnderecoEntrega.ativo.is_(True)
         ).first()
 
@@ -52,11 +52,11 @@ class EnderecoService:
         return EnderecoResponseDTO.model_validate(endereco)
 
     @staticmethod
-    def listar_enderecos_da_empresa(db: Session, id_empresa: str | None = None) -> list[EnderecoResponseDTO]:
-        # TODO: quando JWT for implementado, id_empresa sempre virá do token — remover o None.
-        query = db.query(EnderecoEntrega).filter(EnderecoEntrega.ativo.is_(True))
-        if id_empresa:
-            query = query.filter(EnderecoEntrega.id_empresa == id_empresa)
+    def listar_enderecos_da_empresa(db: Session, id_empresa: str) -> list[EnderecoResponseDTO]:
+        query = db.query(EnderecoEntrega).filter(
+            EnderecoEntrega.ativo.is_(True),
+            EnderecoEntrega.id_empresa == id_empresa
+        )
         return [EnderecoResponseDTO.model_validate(e) for e in query.all()]
 
     @staticmethod

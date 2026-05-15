@@ -39,6 +39,8 @@ class ProdutoProjecaoDTO(BaseModel):
     }
 
 
+from Security.auth import get_current_empresa_id
+
 @router.get(
     "/produtos/projecao",
     response_model=List[ProdutoProjecaoDTO],
@@ -50,6 +52,7 @@ class ProdutoProjecaoDTO(BaseModel):
 def get_produto_projecao(
     id_produto: Optional[str] = None,
     db: Session = Depends(get_db),
+    id_empresa: str = Depends(get_current_empresa_id)
 ):
     """
     Retorna a projeção local de produto(s) a partir do cache Kafka.

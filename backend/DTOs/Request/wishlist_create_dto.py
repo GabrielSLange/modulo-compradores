@@ -2,8 +2,6 @@ from pydantic import BaseModel, Field
 from typing import Optional
 
 class WishlistCreateDTO(BaseModel):
-    id_empresa: str = Field(..., description="ID da empresa compradora")
-    id_usuario: str = Field(..., description="ID do usuário que salvou")
     id_produto: str = Field(..., description="ID do produto")
     quantidade_desejada: Optional[float] = Field(None, gt=0)
     preco_maximo: Optional[float] = Field(None)

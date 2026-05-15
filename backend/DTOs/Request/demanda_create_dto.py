@@ -4,8 +4,6 @@ from typing import Optional
 from DTOs.Request.demanda_recorrencia_create_dto import DemandaRecorrenciaCreateDTO
 
 class DemandaCreateDTO(BaseModel):
-    id_empresa_comprador: str = Field(..., description="ID da empresa compradora (Equipe 1)")
-    id_usuario_criador: str = Field(..., description="ID do usuário que está criando (Equipe 1)")
     id_produto: str = Field(..., description="ID do produto (Equipe 2)")
     id_endereco_destino: str = Field(..., description="ID do endereço de entrega")
     quantidade_desejada: float = Field(..., gt=0, description="Quantidade deve ser maior que zero")

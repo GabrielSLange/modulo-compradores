@@ -7,6 +7,7 @@ from DTOs.Request.wishlist_create_dto import WishlistCreateDTO, WishlistConverte
 from DTOs.Response.wishlist_response_dto import WishlistResponseDTO
 from DTOs.Response.demanda_response_dto import DemandaResponseDTO
 from Services.wishlist_service import WishlistService
+from Security.auth import get_current_empresa_id, get_current_usuario_id
 
 router = APIRouter()
 
@@ -18,17 +19,21 @@ def get_db():
         db.close()
 
 @router.post("/wishlist", response_model=WishlistResponseDTO, status_code=status.HTTP_201_CREATED)
-def adicionar_na_wishlist(dto: WishlistCreateDTO, db: Session = Depends(get_db)):
+def adicionar_na_wishlist(
+    dto: WishlistCreateDTO, 
+    db: Session = Depends(get_db),
+    id_empresa: str = Depends(get_current_empresa_id),
+    id_usuario: str = Depends(get_current_usuario_id)
+):
     try:
-        return WishlistService.adicionar_item(db, dto)
+        return WishlistService.adicionar_item(db, dto, id_empresa, id_usuario)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao adicionar na wishlist: {str(e)}")
 
 @router.get("/wishlist", response_model=List[WishlistResponseDTO])
 def listar_wishlist(
     db: Session = Depends(get_db),
-    # TODO: quando JWT for implementado, filtrar por id_empresa do token.
-    id_empresa: Optional[str] = None,
+    id_empresa: str = Depends(get_current_empresa_id)
 ):
     try:
         return WishlistService.listar_itens_pendentes(db, id_empresa)
@@ -38,13 +43,14 @@ def listar_wishlist(
 @router.post("/wishlist/{id_item}/converter", response_model=DemandaResponseDTO)
 def converter_wishlist_para_demanda(
     id_item: str, 
-    id_usuario: str, 
     dto: WishlistConverterDTO, 
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    id_empresa: str = Depends(get_current_empresa_id),
+    id_usuario: str = Depends(get_current_usuario_id)
 ):
     try:
         # Retorna o modelo de Demanda e não de Wishlist!
-        demanda_gerada = WishlistService.converter_em_demanda(db, id_item, id_usuario, dto)
+        demanda_gerada = WishlistService.converter_em_demanda(db, id_item, id_usuario, dto, id_empresa)
         return demanda_gerada
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))

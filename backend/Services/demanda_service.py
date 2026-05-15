@@ -8,11 +8,11 @@ from sqlalchemy import desc
 
 class DemandaService:
     @staticmethod
-    def criar_demanda(db: Session, dto: DemandaCreateDTO) -> DemandaResponseDTO:
+    def criar_demanda(db: Session, dto: DemandaCreateDTO, id_empresa_comprador: str, id_usuario_criador: str) -> DemandaResponseDTO:
         # 1. Cria a Demanda (A Raiz)
         nova_demanda = Demanda(
-            id_empresa_comprador=dto.id_empresa_comprador,
-            id_usuario_criador=dto.id_usuario_criador,
+            id_empresa_comprador=id_empresa_comprador,
+            id_usuario_criador=id_usuario_criador,
             id_produto=dto.id_produto,
             id_endereco_destino=dto.id_endereco_destino,
             quantidade_desejada=dto.quantidade_desejada,
@@ -55,19 +55,19 @@ class DemandaService:
         return DemandaResponseDTO.model_validate(nova_demanda)
     
     @staticmethod
-    def listar_demandas_da_empresa(db: Session, id_empresa: str | None = None) -> list[DemandaResponseDTO]:
-        # TODO: quando JWT for implementado, id_empresa sempre virá do token — remover o None.
-        query = db.query(Demanda)
-        if id_empresa:
-            query = query.filter(Demanda.id_empresa_comprador == id_empresa)
+    def listar_demandas_da_empresa(db: Session, id_empresa: str) -> list[DemandaResponseDTO]:
+        query = db.query(Demanda).filter(Demanda.id_empresa_comprador == id_empresa)
         demandas = query.order_by(desc(Demanda.data_criacao)).all()
         return [DemandaResponseDTO.model_validate(d) for d in demandas]
 
     @staticmethod
-    def atualizar_status(db: Session, id_demanda: str, novo_status: str) -> DemandaResponseDTO:
-        demanda = db.query(Demanda).filter(Demanda.id_demanda == id_demanda).first()
+    def atualizar_status(db: Session, id_demanda: str, novo_status: str, id_empresa_comprador: str) -> DemandaResponseDTO:
+        demanda = db.query(Demanda).filter(
+            Demanda.id_demanda == id_demanda,
+            Demanda.id_empresa_comprador == id_empresa_comprador
+        ).first()
         if not demanda:
-            raise ValueError(f"Demanda {id_demanda} não encontrada.")
+            raise ValueError(f"Demanda {id_demanda} não encontrada ou você não tem permissão.")
         
         demanda.status = novo_status
         db.commit()

@@ -2,7 +2,6 @@ from pydantic import BaseModel, Field
 from typing import Optional
 
 class EnderecoCreateDTO(BaseModel):
-    id_empresa: str = Field(..., description="ID da empresa compradora")
     apelido: Optional[str] = Field(None, description="Apelido amigavel do endereco")
     logradouro: str = Field(..., max_length=200)
     numero: Optional[str] = Field(None, max_length=20)
