@@ -2,7 +2,7 @@ import { api } from "./api";
 import type { Demanda, DemandaStatus } from "@/features/types";
 
 export async function listarDemandas(): Promise<Demanda[]> {
-  return await api.get<Demanda[]>("/api/demandas");
+  return await api.get<Demanda[]>("/api/demandas/");
 }
 
 export type CriarDemandaPayload = Omit<
@@ -17,7 +17,7 @@ export async function criarDemanda(payload: CriarDemandaPayload): Promise<Demand
     ...rest,
     id_endereco_destino: id_endereco_entrega || (payload as any).id_endereco_destino,
   };
-  return await api.post<Demanda>("/api/demandas", data);
+  return await api.post<Demanda>("/api/demandas/", data);
 }
 
 export async function cancelarDemanda(id: string): Promise<Demanda> {
