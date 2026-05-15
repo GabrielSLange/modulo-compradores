@@ -52,6 +52,7 @@ export interface WishlistItem {
   quantidade_desejada: number;
   observacao?: string;
   convertida_em_demanda: boolean;
+  convertido_em_demanda?: boolean;
   id_demanda_gerada?: string;
   data_criacao: string;
 }

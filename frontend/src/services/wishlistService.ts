@@ -7,11 +7,13 @@ export type AdicionarWishlistPayload = Omit<
 >;
 
 export async function listarWishlist(): Promise<WishlistItem[]> {
-  return await api.get<WishlistItem[]>("/api/demandas/wishlist");
+  const items = await api.get<(WishlistItem & { convertido_em_demanda?: boolean })[]>("/api/demandas/wishlist");
+  return items.map(normalizeWishlistItem);
 }
 
 export async function adicionarWishlist(payload: AdicionarWishlistPayload): Promise<WishlistItem> {
-  return await api.post<WishlistItem>("/api/demandas/wishlist", payload);
+  const item = await api.post<WishlistItem & { convertido_em_demanda?: boolean }>("/api/demandas/wishlist", payload);
+  return normalizeWishlistItem(item);
 }
 
 export type ConverterWishlistPayload = {
@@ -22,4 +24,11 @@ export type ConverterWishlistPayload = {
 
 export async function converterWishlist(id: string, payload: ConverterWishlistPayload): Promise<Demanda> {
   return await api.post<Demanda>(`/api/demandas/wishlist/${id}/converter`, payload);
+}
+
+function normalizeWishlistItem(item: WishlistItem & { convertido_em_demanda?: boolean }): WishlistItem {
+  return {
+    ...item,
+    convertida_em_demanda: item.convertida_em_demanda ?? item.convertido_em_demanda ?? false,
+  };
 }
