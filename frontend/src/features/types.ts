@@ -9,7 +9,7 @@ export interface EnderecoEntrega {
   id_empresa: string;
   apelido: string;          // ex.: "Matriz", "Filial SP"
   logradouro: string;
-  numero: string;
+  numero?: string;
   complemento?: string;
   bairro: string;
   cidade: string;
