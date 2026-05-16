@@ -62,7 +62,7 @@ export function NovaDemandaDialog() {
   const RESET_VALUES = { is_recorrente: false, quantidade_desejada: 1, prioridade: "media" as const, id_produto: "", id_endereco_entrega: "", observacao: "", frequencia: undefined, data_inicio: "", data_fim: "", dia_preferencial: undefined };
 
   const onSubmit = form.handleSubmit((v) => {
-    create.mutate({
+    const payload: any = {
       id_produto: v.id_produto,
       id_endereco_entrega: v.id_endereco_entrega,
       quantidade_desejada: v.quantidade_desejada,
@@ -70,16 +70,18 @@ export function NovaDemandaDialog() {
       preco_maximo: v.preco_maximo,
       observacao: v.observacao,
       is_recorrente: v.is_recorrente,
-      recorrencia: v.is_recorrente
-        ? {
-            frequencia: v.frequencia as RecorrenciaFrequencia,
-            quantidade_por_periodo: v.quantidade_desejada,
-            data_inicio: v.data_inicio!,
-            data_fim: v.data_fim || undefined,
-            dia_preferencial: String(v.dia_preferencial!),
-          }
-        : undefined,
-    }, {
+    };
+
+    if (v.is_recorrente) {
+      payload.recorrencia = {
+        frequencia: v.frequencia as RecorrenciaFrequencia,
+        data_inicio: v.data_inicio!,
+        ...(v.data_fim ? { data_fim: v.data_fim } : {}),
+        dia_preferencial: Number(v.dia_preferencial!),
+      };
+    }
+
+    create.mutate(payload, {
       onSuccess: () => {
         form.reset(RESET_VALUES);
         setOpen(false);

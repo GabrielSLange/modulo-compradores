@@ -40,6 +40,7 @@ export interface Demanda {
   status: DemandaStatus;
   is_recorrente: boolean;
   recorrencia?: DemandaRecorrencia;
+  is_pedido: boolean;
   data_criacao: string;
   atualizado_em: string;
 }

@@ -28,3 +28,7 @@ export async function atualizarStatus(id: string, status: DemandaStatus): Promis
   if (status === "cancelada") return cancelarDemanda(id);
   return await api.patch<Demanda>(`/api/demandas/${id}/status`, { status });
 }
+
+export async function formalizarDemanda(id: string): Promise<Demanda> {
+  return await api.patch<Demanda>(`/api/demandas/${id}/formalizar`);
+}

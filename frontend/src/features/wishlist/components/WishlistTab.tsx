@@ -117,7 +117,11 @@ export function WishlistTab() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={5}><Skeleton className="h-10 w-full" /></TableCell></TableRow>
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell colSpan={5}><Skeleton className="h-10 w-full" /></TableCell>
+                </TableRow>
+              ))
             ) : (items ?? []).length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
@@ -189,7 +193,7 @@ export function WishlistTab() {
                 await convert.mutateAsync({
                   id: convertItem.id,
                   payload: {
-                    id_endereco_destino: endereco,
+                    id_endereco_entrega: endereco,
                     quantidade_desejada: convertItem.quantidade_desejada,
                     prioridade: "media"
                   }

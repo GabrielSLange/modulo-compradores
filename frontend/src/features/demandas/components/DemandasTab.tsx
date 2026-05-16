@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { format } from "date-fns";
-import { Eye, Search, RefreshCw, Repeat, X } from "lucide-react";
+import { Eye, Search, RefreshCw, Repeat, X, ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,23 +11,37 @@ import {
 } from "@/components/ui/select";
 
 import { toast } from "sonner";
-import { useDemandas, useUpdateStatus } from "../hooks/useDemandas";
+import { useDemandas, useUpdateStatus, useFormalizarPedido } from "../hooks/useDemandas";
 import { useProdutos } from "@/features/produtos/hooks/useProduto";
 import { ProdutoCell } from "@/features/produtos/components/ProdutoCell";
 import { StatusBadge } from "./StatusBadge";
 import { NovaDemandaDialog } from "./NovaDemandaDialog";
 import { VisualizarDemandaDialog } from "./VisualizarDemandaDialog";
 import type { DemandaStatus } from "@/features/types";
+import { FileCheck } from "lucide-react";
 
-export function DemandasTab() {
+interface DemandasTabProps {
+  isPedido?: boolean;
+}
+
+export function DemandasTab({ isPedido = false }: DemandasTabProps) {
   const { data: demandas, isLoading, refetch, isFetching } = useDemandas();
   const { data: produtos } = useProdutos();
   const updateStatus = useUpdateStatus();
+  const formalizarPedido = useFormalizarPedido();
   const [busca, setBusca] = useState("");
   const [statusFilter, setStatusFilter] = useState<"todas" | DemandaStatus>("todas");
+  const [pagina, setPagina] = useState(1);
+  const itensPorPagina = 15;
 
-  const lista = useMemo(() => {
+  useEffect(() => {
+    setPagina(1);
+  }, [busca, statusFilter]);
+
+  const listaFiltrada = useMemo(() => {
     return (demandas ?? []).filter((d) => {
+      if (isPedido && !d.is_pedido) return false;
+      if (!isPedido && d.is_pedido) return false;
       if (statusFilter !== "todas" && d.status !== statusFilter) return false;
       if (busca) {
         const idMatch = d.id.toLowerCase().includes(busca.toLowerCase());
@@ -39,14 +53,21 @@ export function DemandasTab() {
     });
   }, [demandas, busca, statusFilter, produtos]);
 
+  const totalPaginas = Math.max(1, Math.ceil(listaFiltrada.length / itensPorPagina));
+  const lista = useMemo(() => {
+    return listaFiltrada.slice((pagina - 1) * itensPorPagina, pagina * itensPorPagina);
+  }, [listaFiltrada, pagina]);
+
   return (
     <section className="space-y-4">
       <header className="flex flex-col gap-3 rounded-lg border border-border bg-card p-5 shadow-[var(--shadow-card)]">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-lg font-semibold text-primary">Demandas</h2>
+            <h2 className="text-lg font-semibold text-primary">{isPedido ? "Pedidos" : "Demandas"}</h2>
             <p className="text-sm text-muted-foreground">
-              Intenções de compra. Status atualiza automaticamente conforme eventos do <em>Matching Engine</em>.
+              {isPedido
+                ? "Acompanhamento de pedidos formalizados e em negociação."
+                : "Intenções de compra."}
             </p>
           </div>
           <NovaDemandaDialog />
@@ -66,12 +87,12 @@ export function DemandasTab() {
             <SelectContent>
               <SelectItem value="todas">Todos status</SelectItem>
               <SelectItem value="aberta">Aberta</SelectItem>
-              <SelectItem value="em_negociacao">Em negociação</SelectItem>
-              <SelectItem value="atendida">Atendida</SelectItem>
+              {isPedido && <SelectItem value="em_negociacao">Em negociação</SelectItem>}
+              {isPedido && <SelectItem value="atendida">Atendida</SelectItem>}
               <SelectItem value="cancelada">Cancelada</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" size="icon" onClick={() => { refetch(); toast.info("Atualizando demandas..."); }} aria-label="Atualizar">
+          <Button variant="outline" size="icon" onClick={() => refetch()} aria-label="Atualizar">
             <RefreshCw className={isFetching ? "animate-spin" : ""} />
           </Button>
         </div>
@@ -91,63 +112,96 @@ export function DemandasTab() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading
-              ? Array.from({ length: 4 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell colSpan={7}><Skeleton className="h-10 w-full" /></TableCell>
-                  </TableRow>
-                ))
+            {isLoading || isFetching
+              ? Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell colSpan={7}><Skeleton className="h-10 w-full" /></TableCell>
+                </TableRow>
+              ))
               : lista.length === 0
-              ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
-                    Nenhuma demanda encontrada.
-                  </TableCell>
-                </TableRow>
-              )
-              : lista.map((d) => (
-                <TableRow key={d.id} className="hover:bg-accent/40">
-                  <TableCell className="font-mono text-xs">{d.id}</TableCell>
-                  <TableCell><ProdutoCell id={d.id_produto} /></TableCell>
-                  <TableCell className="font-medium">{d.quantidade_desejada}</TableCell>
-                  <TableCell>
-                    {d.is_recorrente ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-secondary/15 px-2 py-0.5 text-xs font-medium text-secondary border border-secondary/30">
-                        <Repeat className="size-3" /> {d.recorrencia?.frequencia}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">Única</span>
-                    )}
-                  </TableCell>
-                  <TableCell><StatusBadge status={d.status} /></TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {format(new Date(d.data_criacao), "dd/MM/yyyy HH:mm")}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <VisualizarDemandaDialog demanda={d} />
-                      {d.status !== "cancelada" && d.status !== "atendida" && (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          title="Cancelar"
-                          onClick={() => updateStatus.mutate({ id: d.id, status: "cancelada" })}
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                        >
-                          <X className="size-4" />
-                        </Button>
+                ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
+                      {isPedido ? "Nenhum pedido encontrado." : "Nenhuma demanda encontrada."}
+                    </TableCell>
+                  </TableRow>
+                )
+                : lista.map((d) => (
+                  <TableRow key={d.id} className="hover:bg-accent/40">
+                    <TableCell className="font-mono text-xs">{d.id}</TableCell>
+                    <TableCell><ProdutoCell id={d.id_produto} /></TableCell>
+                    <TableCell className="font-medium">{d.quantidade_desejada}</TableCell>
+                    <TableCell>
+                      {d.is_recorrente ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-secondary/15 px-2 py-0.5 text-xs font-medium text-secondary border border-secondary/30">
+                          <Repeat className="size-3" /> {d.recorrencia?.frequencia}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Única</span>
                       )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+                    </TableCell>
+                    <TableCell><StatusBadge status={d.status} /></TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {format(new Date(d.data_criacao), "dd/MM/yyyy HH:mm")}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <VisualizarDemandaDialog demanda={d} />
+                        {!isPedido && d.status === "aberta" && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            title="Formalizar como Pedido"
+                            onClick={() => formalizarPedido.mutate(d.id)}
+                            className="text-primary hover:text-primary hover:bg-primary/10"
+                          >
+                            <FileCheck className="size-4" />
+                          </Button>
+                        )}
+                        {d.status !== "cancelada" && d.status !== "atendida" && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            title="Cancelar"
+                            onClick={() => updateStatus.mutate({ id: d.id, status: "cancelada" })}
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          >
+                            <X className="size-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
           </TableBody>
         </Table>
       </div>
 
-      <p className="px-1 text-xs text-muted-foreground">
-        Exibindo {lista.length} registro(s) · sincronizado a cada 8s (polling de eventos Kafka).
-      </p>
+      <div className="flex items-center justify-between px-1">
+        <p className="text-xs text-muted-foreground">
+          Exibindo página {pagina} de {totalPaginas} · {listaFiltrada.length} registro(s)
+        </p>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPagina((p) => Math.max(1, p - 1))}
+            disabled={pagina === 1}
+            className="h-8 text-xs bg-transparent"
+          >
+            <ChevronLeft className="mr-1 size-3" /> Anterior
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
+            disabled={pagina === totalPaginas}
+            className="h-8 text-xs bg-transparent"
+          >
+            Próxima <ChevronRight className="ml-1 size-3" />
+          </Button>
+        </div>
+      </div>
     </section>
   );
 }

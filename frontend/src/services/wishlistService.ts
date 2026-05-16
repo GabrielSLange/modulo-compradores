@@ -17,7 +17,7 @@ export async function adicionarWishlist(payload: AdicionarWishlistPayload): Prom
 }
 
 export type ConverterWishlistPayload = {
-  id_endereco_destino: string;
+  id_endereco_entrega: string;
   quantidade_desejada: number;
   prioridade: "baixa" | "media" | "alta";
 };

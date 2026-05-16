@@ -5,18 +5,17 @@ import {
   criarDemanda,
   cancelarDemanda,
   atualizarStatus,
+  formalizarDemanda,
   type CriarDemandaPayload,
 } from "@/services/demandaService";
 import type { Demanda, DemandaStatus } from "@/features/types";
 
 const KEY = ["demandas"] as const;
 
-// refetchInterval simula a reatividade dos eventos Kafka enquanto o WS não existe.
 export function useDemandas() {
   return useQuery({
     queryKey: KEY,
     queryFn: () => listarDemandas(),
-    refetchInterval: 8000,
     staleTime: 4000,
   });
 }
@@ -70,6 +69,30 @@ export function useUpdateStatus() {
     },
     onSuccess: (_d, v) => {
       if (v.status === "cancelada") toast.success("Demanda cancelada", { description: "Evento demanda_cancelada publicado." });
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: KEY }),
+  });
+}
+
+export function useFormalizarPedido() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => formalizarDemanda(id),
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: KEY });
+      const prev = qc.getQueryData<Demanda[]>(KEY) ?? [];
+      qc.setQueryData<Demanda[]>(
+        KEY,
+        prev.map((d) => (d.id === id ? { ...d, is_pedido: true } : d)),
+      );
+      return { prev };
+    },
+    onError: (err, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(KEY, ctx.prev);
+      toast.error("Falha ao formalizar pedido", { description: (err as Error).message });
+    },
+    onSuccess: () => {
+      toast.success("Pedido formalizado com sucesso");
     },
     onSettled: () => qc.invalidateQueries({ queryKey: KEY }),
   });
