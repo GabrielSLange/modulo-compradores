@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { format } from "date-fns";
-import { MapPin, Pencil, X } from "lucide-react";
+import { MapPin, Pencil, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -11,6 +11,13 @@ import { EnderecoDialog } from "./EnderecoDialog";
 export function EnderecosTab() {
   const { data: enderecos, isLoading } = useEnderecos();
   const deleteEndereco = useDeleteEndereco();
+
+  const [pagina, setPagina] = useState(1);
+  const itensPorPagina = 10;
+  const totalPaginas = Math.max(1, Math.ceil((enderecos ?? []).length / itensPorPagina));
+  const lista = useMemo(() => {
+    return (enderecos ?? []).slice((pagina - 1) * itensPorPagina, pagina * itensPorPagina);
+  }, [enderecos, pagina]);
 
   return (
     <section className="space-y-4">
@@ -46,7 +53,7 @@ export function EnderecosTab() {
                   Nenhum endereço encontrado.
                 </TableCell>
               </TableRow>
-            ) : (enderecos ?? []).map((e) => (
+            ) : lista.map((e) => (
               <TableRow key={e.id} className="hover:bg-accent/40">
                 <TableCell className="font-semibold">
                   <span className="inline-flex items-center gap-2"><MapPin className="size-4 text-primary" />{e.apelido}</span>
@@ -80,6 +87,32 @@ export function EnderecosTab() {
             ))}
           </TableBody>
         </Table>
+      </div>
+
+      <div className="flex items-center justify-between px-1">
+        <p className="text-xs text-muted-foreground">
+          Exibindo página {pagina} de {totalPaginas} · {(enderecos ?? []).length} registro(s)
+        </p>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPagina((p) => Math.max(1, p - 1))}
+            disabled={pagina === 1}
+            className="h-8 text-xs bg-transparent"
+          >
+            <ChevronLeft className="mr-1 size-3" /> Anterior
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
+            disabled={pagina === totalPaginas}
+            className="h-8 text-xs bg-transparent"
+          >
+            Próxima <ChevronRight className="ml-1 size-3" />
+          </Button>
+        </div>
       </div>
     </section>
   );

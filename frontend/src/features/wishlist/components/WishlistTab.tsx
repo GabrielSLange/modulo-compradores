@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { format } from "date-fns";
-import { ArrowRightCircle, Plus } from "lucide-react";
+import { ArrowRightCircle, Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -42,6 +42,13 @@ export function WishlistTab() {
   const [endereco, setEndereco] = useState<string>("");
 
   const form = useForm<Form>({ resolver: zodResolver(schema), defaultValues: { quantidade_desejada: 1, id_produto: "", observacao: "" } });
+
+  const [pagina, setPagina] = useState(1);
+  const itensPorPagina = 10;
+  const totalPaginas = Math.max(1, Math.ceil((items ?? []).length / itensPorPagina));
+  const lista = useMemo(() => {
+    return (items ?? []).slice((pagina - 1) * itensPorPagina, pagina * itensPorPagina);
+  }, [items, pagina]);
 
   return (
     <section className="space-y-4">
@@ -128,7 +135,7 @@ export function WishlistTab() {
                   Nenhum item na wishlist.
                 </TableCell>
               </TableRow>
-            ) : items!.map((w) => (
+            ) : lista.map((w) => (
               <TableRow key={w.id} className="hover:bg-accent/40">
                 <TableCell><ProdutoCell id={w.id_produto} /></TableCell>
                 <TableCell className="font-medium">{w.quantidade_desejada}</TableCell>
@@ -162,6 +169,32 @@ export function WishlistTab() {
             ))}
           </TableBody>
         </Table>
+      </div>
+
+      <div className="flex items-center justify-between px-1">
+        <p className="text-xs text-muted-foreground">
+          Exibindo página {pagina} de {totalPaginas} · {(items ?? []).length} registro(s)
+        </p>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPagina((p) => Math.max(1, p - 1))}
+            disabled={pagina === 1}
+            className="h-8 text-xs bg-transparent"
+          >
+            <ChevronLeft className="mr-1 size-3" /> Anterior
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
+            disabled={pagina === totalPaginas}
+            className="h-8 text-xs bg-transparent"
+          >
+            Próxima <ChevronRight className="ml-1 size-3" />
+          </Button>
+        </div>
       </div>
 
       <Dialog open={!!convertItem} onOpenChange={(o) => { if (!o) { setConvertItem(null); setEndereco(""); } }}>

@@ -96,7 +96,7 @@ export function NovaDemandaDialog() {
           <Plus className="size-4" /> Nova demanda
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Nova demanda</DialogTitle>
           <DialogDescription>
