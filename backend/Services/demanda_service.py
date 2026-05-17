@@ -1,3 +1,4 @@
+from typing import Optional
 from sqlalchemy.orm import Session
 from Models.demanda_model import Demanda
 from Models.demanda_recorrencia_model import DemandaRecorrencia
@@ -55,8 +56,10 @@ class DemandaService:
         return DemandaResponseDTO.model_validate(nova_demanda)
     
     @staticmethod
-    def listar_demandas_da_empresa(db: Session, id_empresa: str) -> list[DemandaResponseDTO]:
+    def listar_demandas_da_empresa(db: Session, id_empresa: str, is_pedido: Optional[bool] = None) -> list[DemandaResponseDTO]:
         query = db.query(Demanda).filter(Demanda.id_empresa_comprador == id_empresa)
+        if is_pedido is not None:
+            query = query.filter(Demanda.is_pedido == is_pedido)
         demandas = query.order_by(desc(Demanda.data_criacao)).all()
         return [DemandaResponseDTO.model_validate(d) for d in demandas]
 
@@ -82,5 +85,28 @@ class DemandaService:
             }
             # Aqui no futuro chamaremos algo como DemandaProducer.publicar_demanda_cancelada
             pass
-            
+
+        return DemandaResponseDTO.model_validate(demanda)
+
+    @staticmethod
+    def promover_para_pedido(db: Session, id_demanda: str, id_empresa_comprador: str) -> DemandaResponseDTO:
+        demanda = db.query(Demanda).filter(
+            Demanda.id_demanda == id_demanda,
+            Demanda.id_empresa_comprador == id_empresa_comprador
+        ).first()
+
+        if not demanda:
+            raise ValueError("Demanda não encontrada")
+
+        # Idempotente: se já é pedido, devolve sem alterar nada
+        if demanda.is_pedido:
+            return DemandaResponseDTO.model_validate(demanda)
+
+        if demanda.status == "cancelada":
+            raise ValueError("Não é possível promover demanda cancelada para pedido")
+
+        demanda.is_pedido = True
+        db.commit()
+        db.refresh(demanda)
+
         return DemandaResponseDTO.model_validate(demanda)

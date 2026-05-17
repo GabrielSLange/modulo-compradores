@@ -13,6 +13,7 @@ class DemandaResponseDTO(BaseModel):
     prioridade: str
     status: str
     is_recorrente: bool
+    is_pedido: bool
     observacao: Optional[str] = Field(None, validation_alias="observacoes")
     data_criacao: Optional[datetime] = None
     atualizado_em: Optional[datetime] = None
