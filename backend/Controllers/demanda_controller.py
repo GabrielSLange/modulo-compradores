@@ -38,11 +38,12 @@ def criar_nova_demanda(
 
 @router.get("/", response_model=List[DemandaResponseDTO])
 def listar_demandas(
+    is_pedido: Optional[bool] = None,
     db: Session = Depends(get_db),
     id_empresa: str = Depends(get_current_empresa_id)
 ):
     try:
-        demandas = DemandaService.listar_demandas_da_empresa(db, id_empresa)
+        demandas = DemandaService.listar_demandas_da_empresa(db, id_empresa, is_pedido)
         return demandas
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao buscar demandas: {str(e)}")
@@ -67,7 +68,7 @@ def atualizar_status_demanda(
 
 @router.patch("/{id_demanda}/cancelar", response_model=DemandaResponseDTO)
 def cancelar_demanda(
-    id_demanda: str, 
+    id_demanda: str,
     db: Session = Depends(get_db),
     id_empresa: str = Depends(get_current_empresa_id)
 ):
@@ -77,3 +78,16 @@ def cancelar_demanda(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao cancelar demanda: {str(e)}")
+
+@router.patch("/{id_demanda}/promover", response_model=DemandaResponseDTO)
+def promover_demanda_para_pedido(
+    id_demanda: str,
+    db: Session = Depends(get_db),
+    id_empresa: str = Depends(get_current_empresa_id)
+):
+    try:
+        return DemandaService.promover_para_pedido(db, id_demanda, id_empresa)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao promover demanda para pedido: {str(e)}")

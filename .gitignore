@@ -1,1 +1,9 @@
 .env
+
+# Python
+__pycache__/
+*.pyc
+venv/
+
+# Local SQLite (não versionar, recriar via seed.py)
+*.db

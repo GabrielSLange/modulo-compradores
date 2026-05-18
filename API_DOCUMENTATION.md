@@ -90,6 +90,9 @@ O módulo escuta eventos para manter cache local e sincronizar o status das dema
 #### 1. Eventos de Produtos (Equipe 2 - Catálogo)
 Garante resiliência tendo um espelho dos produtos localmente.
 - **Tópico:** `sdi.produto.events`
+
+> ⚠️ **Divergência atual de implementação:** o `produto_consumer.py` está inscrito no tópico `produto_cadastrado`, não em `sdi.produto.events`. Combinar com a Equipe 2 e padronizar.
+
 - **Ação:** Cria/atualiza registros na tabela `produto_cache`.
 - **Payload Esperado:**
 ```json
@@ -159,15 +162,28 @@ O módulo notifica o ecossistema sempre que uma nova demanda de compra surge (se
 
 URL Base: `http://localhost:5004` (ou roteado via API Gateway em `/api/`)
 
-> **Nota sobre Autenticação:** Atualmente, a API aceita `id_empresa` e `id_usuario` diretamente nos payloads ou parâmetros de desenvolvimento. Quando o módulo de IAM (JWT) for integrado, esses dados serão extraídos do Token no Header `Authorization`.
+### 🔐 Autenticação
+
+Todos os endpoints (exceto `/ping`) exigem o header `Authorization: Bearer <jwt>`. O JWT deve conter as claims:
+
+- `sub`: id do usuário
+- `empresa_id`: id da empresa do comprador
+- `aud`: `portal-b2b`
+- `iss`: `portal-autenticacao`
+
+O `id_empresa` e `id_usuario` são extraídos do token — **não devem mais ser enviados em body, query ou path**.
 
 ### 1. Demandas
 
 Gerencia o ciclo de vida das intenções de compra.
 
 #### `GET /demandas`
-Lista todas as demandas da empresa.
-- **Query Params:** `id_empresa` (Opcional, para testes)
+Lista as demandas da empresa autenticada.
+- **Query Params:** `is_pedido` (Opcional, bool) — filtra entre demandas e pedidos.
+- **Exemplos:**
+  - `GET /demandas` → todas as demandas da empresa
+  - `GET /demandas?is_pedido=true` → só os pedidos
+  - `GET /demandas?is_pedido=false` → só as demandas que ainda não viraram pedido
 - **Response (200 OK):** Array de objetos Demanda.
 
 #### `POST /demandas`
@@ -175,8 +191,6 @@ Cria uma nova demanda.
 - **Body:**
   ```json
   {
-    "id_empresa_comprador": "uuid-empresa",
-    "id_usuario_criador": "uuid-usuario",
     "id_produto": "uuid-produto",
     "id_endereco_destino": "uuid-endereco",
     "quantidade_desejada": 10,
@@ -196,6 +210,13 @@ Atualiza o status de uma demanda.
 Cancela uma demanda (Soft Delete / Mudança de Status).
 - **Response (200 OK):** Objeto Demanda cancelado.
 
+#### `PATCH /demandas/{id_demanda}/promover`
+Promove uma demanda para pedido (marca `is_pedido=true`). **Idempotente:** se a demanda já for pedido, retorna o estado atual sem alteração.
+- **Erros:**
+  - `400 Bad Request` — `"Demanda não encontrada"` (id não existe na empresa do token).
+  - `400 Bad Request` — `"Não é possível promover demanda cancelada para pedido"`.
+- **Response (200 OK):** Objeto Demanda atualizado com `is_pedido: true`.
+
 ---
 
 ### 2. Endereços de Entrega
@@ -212,7 +233,6 @@ Cadastra um novo endereço de entrega.
 - **Body:**
   ```json
   {
-    "id_empresa": "uuid-empresa",
     "apelido": "Sede Principal", // Opcional
     "logradouro": "Avenida Paulista",
     "numero": "1000",
@@ -225,9 +245,14 @@ Cadastra um novo endereço de entrega.
   ```
 - **Response (201 Created):** Objeto Endereço criado.
 
+#### `PUT /enderecos/{id_endereco}`
+Atualiza um endereço de entrega existente. Mesmo schema do `POST /enderecos`.
+- **Body:** Igual ao body do `POST /enderecos`.
+- **Response (200 OK):** Objeto Endereço atualizado.
+- **Response (404 Not Found):** Endereço não encontrado ou não pertence à empresa do token.
+
 #### `DELETE /enderecos/{id_endereco}`
 Desativa um endereço (Soft Delete).
-- **Query Params:** `id_empresa` (Obrigatório para segurança)
 - **Response (204 No Content)**
 
 ---
@@ -238,7 +263,6 @@ Itens que o comprador deseja, mas ainda não formalizou como demanda.
 
 #### `GET /demandas/wishlist`
 Lista itens na wishlist.
-- **Query Params:** `id_empresa`, `id_usuario`
 - **Response (200 OK):** Array de Itens da Wishlist.
 
 #### `POST /demandas/wishlist`

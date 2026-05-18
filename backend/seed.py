@@ -136,6 +136,7 @@ try:
             status="atendida",
             observacoes="Pedido finalizado",
             is_recorrente=False,
+            is_pedido=True,
             data_criacao=now - timedelta(days=10),
             atualizado_em=now - timedelta(days=8),
         ),

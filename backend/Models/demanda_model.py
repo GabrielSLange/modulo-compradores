@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from sqlalchemy import Column, String, Numeric, Boolean, DateTime, ForeignKey, Text
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
+from sqlalchemy.sql import func, expression
 from Data.database import Base
 import uuid
 
@@ -20,6 +20,7 @@ class Demanda(Base):
     preco_maximo = Column(Numeric(12, 2), nullable=True)
     prioridade = Column(String(10), nullable=False)
     is_recorrente = Column(Boolean, nullable=False, default=False)
+    is_pedido = Column(Boolean, nullable=False, default=False, server_default=expression.false())
     status = Column(String(20), nullable=False, default="aberta")
     observacoes = Column(Text, nullable=True)
     data_criacao = Column(DateTime, default=lambda: datetime.now(timezone.utc))
