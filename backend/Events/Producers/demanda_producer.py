@@ -79,8 +79,8 @@ class DemandaProducer:
             producer = DemandaProducer._obter_produtor()
             producer.produce(
                 topic=topico,
-                key=chave,
-                value=json.dumps(evento),
+                key=str(chave),
+                value=json.dumps(evento, default=str),
                 callback=delivery_report,
             )
             producer.flush()
