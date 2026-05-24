@@ -48,10 +48,10 @@ class WishlistService:
 
         # 2. Prepara o DTO da Demanda juntando os dados da Wishlist com os dados da requisição
         demanda_dto = DemandaCreateDTO(
-            id_produto=item.id_produto,
-            id_endereco_destino=dto.id_endereco_destino,
+            id_produto=str(item.id_produto),
+            id_endereco_destino=str(dto.id_endereco_destino),
             quantidade_desejada=dto.quantidade_desejada,
-            preco_maximo=item.preco_maximo,
+            preco_maximo=float(item.preco_maximo) if item.preco_maximo is not None else None,
             prioridade=dto.prioridade,
             observacoes=item.observacoes,
             is_recorrente=False # Conversão simples não é recorrente por padrão
@@ -65,4 +65,4 @@ class WishlistService:
         item.id_demanda_gerada = nova_demanda.id # Agora acessa o .id do DTO, e não .id_demanda
         db.commit()
 
-        return nova_demanda
+        return nova_demanda
