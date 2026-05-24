@@ -8,6 +8,7 @@ Contém apenas os campos essenciais para o Módulo de Compradores.
 import uuid
 from datetime import datetime, timezone
 
+# pyrefly: ignore [missing-import]
 from sqlalchemy import Column, String, Boolean, DateTime
 from Data.database import Base
 

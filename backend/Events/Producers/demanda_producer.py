@@ -65,6 +65,59 @@ class DemandaProducer:
             producer.flush()
             
             print(f"[JOB KAFKA] 🤖 Demanda recorrente gerada automaticamente! ID: {id_nova_demanda}")
-            
+
         except Exception as e:
             print(f"[ERRO MENSAGERIA] Falha ao enviar evento de recorrência: {str(e)}")
+
+    @staticmethod
+    def publicar_pedido_criado(id_demanda: str, dados_pedido: dict):
+        """Publica evento quando demanda eh promovida pra pedido (Solucao 1).
+
+        Source = modulo-compradores, pra que nosso proprio pedido_consumer
+        possa ignorar (anti-loop). Equipes externas (negociacao) consomem normal.
+        """
+        try:
+            producer = DemandaProducer._obter_produtor()
+            topico = "pedido_criado"
+
+            evento = {
+                "eventId": str(uuid.uuid4()),
+                "eventType": "pedido_criado",
+                "eventVersion": "1.0",
+                "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+                "source": "modulo-compradores",
+                "correlationId": id_demanda,
+                "payload": dados_pedido
+            }
+
+            producer.produce(topic=topico, key=id_demanda, value=json.dumps(evento))
+            producer.flush()
+            print(f"[PRODUCER] 🚀 pedido_criado disparado. Demanda promovida: {id_demanda}")
+        except Exception as e:
+            print(f"[ERRO MENSAGERIA] Falha ao publicar pedido_criado: {str(e)}")
+
+    @staticmethod
+    def publicar_pedido_atualizado(id_demanda: str, dados_pedido: dict):
+        """Publica evento quando um pedido (demanda com is_pedido=true) muda de status.
+
+        Hoje so disparado quando um pedido eh cancelado. Outros status no futuro.
+        """
+        try:
+            producer = DemandaProducer._obter_produtor()
+            topico = "pedido_atualizado"
+
+            evento = {
+                "eventId": str(uuid.uuid4()),
+                "eventType": "pedido_atualizado",
+                "eventVersion": "1.0",
+                "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+                "source": "modulo-compradores",
+                "correlationId": id_demanda,
+                "payload": dados_pedido
+            }
+
+            producer.produce(topic=topico, key=id_demanda, value=json.dumps(evento))
+            producer.flush()
+            print(f"[PRODUCER] 🚀 pedido_atualizado disparado. Pedido: {id_demanda}")
+        except Exception as e:
+            print(f"[ERRO MENSAGERIA] Falha ao publicar pedido_atualizado: {str(e)}")

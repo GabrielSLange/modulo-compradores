@@ -76,15 +76,16 @@ class DemandaService:
         db.commit()
         db.refresh(demanda)
         
-        # Emite evento se for cancelada
-        if novo_status == "cancelada":
+        # Se eh um pedido (is_pedido=true) e mudou de status, avisa pelo Kafka.
+        # Demandas que ainda nao viraram pedido nao tem evento na doc oficial.
+        if demanda.is_pedido:
             payload_evento = {
+                "id_demanda": demanda.id_demanda,
                 "id_empresa_comprador": demanda.id_empresa_comprador,
                 "id_produto": demanda.id_produto,
-                "status": "cancelada"
+                "status": novo_status
             }
-            # Aqui no futuro chamaremos algo como DemandaProducer.publicar_demanda_cancelada
-            pass
+            DemandaProducer.publicar_pedido_atualizado(demanda.id_demanda, payload_evento)
 
         return DemandaResponseDTO.model_validate(demanda)
 
@@ -108,5 +109,15 @@ class DemandaService:
         demanda.is_pedido = True
         db.commit()
         db.refresh(demanda)
+
+        payload_evento = {
+            "id_demanda": demanda.id_demanda,
+            "id_empresa_comprador": demanda.id_empresa_comprador,
+            "id_produto": demanda.id_produto,
+            "quantidade": float(demanda.quantidade_desejada),
+            "preco_maximo": float(demanda.preco_maximo) if demanda.preco_maximo else None,
+            "prioridade": demanda.prioridade
+        }
+        DemandaProducer.publicar_pedido_criado(demanda.id_demanda, payload_evento)
 
         return DemandaResponseDTO.model_validate(demanda)
