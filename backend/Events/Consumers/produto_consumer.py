@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+# pyrefly: ignore [missing-import]
 from confluent_kafka import Consumer, KafkaError, KafkaException
 from Data.database import SessionLocal
 from Models.produto_cache_model import ProdutoCache
