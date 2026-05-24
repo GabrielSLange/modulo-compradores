@@ -32,7 +32,7 @@ graph TD
     %% Integrações Externas
     subgraph Mensageria [Apache Kafka / Redpanda]
         Topic_Produtos[(Tópico: sdi.produto.events)]
-        Topic_Pedidos[(Tópico: sdi.pedidos.events)]
+        Topic_Pedidos[(Tópicos: pedido_criado, pedido_atualizado)]
     end
     
     subgraph Modulo_Catalogo [Equipe 2 - Catálogo]
@@ -111,7 +111,7 @@ Garante resiliência tendo um espelho dos produtos localmente.
 
 #### 2. Eventos de Pedidos (Equipe 7 - Pedidos)
 **Atenção Equipe 7:** Adotamos a abordagem de *Consumer-Driven Contracts*. O módulo de compradores **exige** que os eventos de criação de pedido trafeguem a informação `id_demanda` correspondente na raiz do payload.
-- **Tópico:** `sdi.pedidos.events`
+- **Tópicos:** `pedido_criado`, `pedido_atualizado`
 - **Ação:** Busca a Demanda pelo ID fornecido e atualiza o seu `status` para `atendida`.
 - **Payload Esperado (Obrigatório):**
 ```json

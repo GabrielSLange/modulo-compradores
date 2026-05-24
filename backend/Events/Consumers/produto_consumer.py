@@ -1,19 +1,17 @@
 import json
 import logging
-import os
 # pyrefly: ignore [missing-import]
 from confluent_kafka import Consumer, KafkaError, KafkaException
+from Config.env import get_env, get_env_list
 from Data.database import SessionLocal
 from Models.produto_cache_model import ProdutoCache
 
 logger = logging.getLogger("produto_consumer")
 
-KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "10.128.0.2:9092,10.128.0.3:9092,10.128.0.4:9092")
-GROUP_ID = os.getenv("KAFKA_GROUP_ID_COMPRADORES", "modulo-compradores-grupo")
+KAFKA_BOOTSTRAP_SERVERS = get_env("KAFKA_BOOTSTRAP_SERVERS", required=True)
+GROUP_ID = get_env("KAFKA_GROUP_ID_COMPRADORES", required=True)
 
-TOPICOS_PRODUTOS = [
-    "produto_cadastrado"
-]
+TOPICOS_PRODUTOS = get_env_list("KAFKA_TOPICOS_PRODUTOS", required=True)
 
 def _upsert_produto(payload: dict):
     db = SessionLocal()
