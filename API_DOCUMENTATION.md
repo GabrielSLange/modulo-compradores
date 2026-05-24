@@ -205,6 +205,7 @@ Cria uma nova demanda.
 Atualiza o status de uma demanda.
 - **Body:** `{ "status": "em_negociacao" }`
 - **Response (200 OK):** Objeto Demanda atualizado.
+- **Efeitos colaterais Kafka:** se a demanda for um pedido (`is_pedido=true`), publica `pedido_atualizado` no tópico `pedido_atualizado` com o novo status no payload. Se ainda for demanda comum (`is_pedido=false`), não publica nada (a doc oficial do professor não tem evento `demanda_atualizada`).
 
 #### `PATCH /demandas/{id_demanda}/cancelar`
 Cancela uma demanda (Soft Delete / Mudança de Status).
@@ -216,6 +217,7 @@ Promove uma demanda para pedido (marca `is_pedido=true`). **Idempotente:** se a 
   - `400 Bad Request` — `"Demanda não encontrada"` (id não existe na empresa do token).
   - `400 Bad Request` — `"Não é possível promover demanda cancelada para pedido"`.
 - **Response (200 OK):** Objeto Demanda atualizado com `is_pedido: true`.
+- **Efeitos colaterais Kafka:** publica `pedido_criado` no tópico `pedido_criado` com envelope padrão do professor e `source=modulo-compradores`. A 2ª chamada não dispara evento (idempotência cai antes do producer). Nosso próprio `pedido_consumer` ignora eventos com `source=modulo-compradores` (anti-loop).
 
 ---
 
