@@ -7,7 +7,7 @@ export async function listarDemandas(): Promise<Demanda[]> {
 
 export type CriarDemandaPayload = Omit<
   Demanda,
-  "id" | "id_usuario_criador" | "id_empresa_comprador" | "status" | "data_criacao" | "atualizado_em"
+  "id" | "id_usuario_criador" | "id_empresa_comprador" | "status" | "data_criacao" | "atualizado_em" | "is_pedido"
 >;
 
 export async function criarDemanda(payload: CriarDemandaPayload): Promise<Demanda> {
@@ -30,5 +30,5 @@ export async function atualizarStatus(id: string, status: DemandaStatus): Promis
 }
 
 export async function formalizarDemanda(id: string): Promise<Demanda> {
-  return await api.patch<Demanda>(`/api/demandas/${id}/formalizar`);
+  return await api.patch<Demanda>(`/api/demandas/${id}/promover`);
 }

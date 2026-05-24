@@ -40,13 +40,27 @@ const schema = z
   .superRefine((v, ctx) => {
     if (!v.is_recorrente) return;
     if (!v.frequencia) ctx.addIssue({ code: "custom", path: ["frequencia"], message: "Obrigatório" });
-    if (!v.data_inicio) ctx.addIssue({ code: "custom", path: ["data_inicio"], message: "Obrigatório" });
+    if (!v.data_inicio) {
+      ctx.addIssue({ code: "custom", path: ["data_inicio"], message: "Obrigatório" });
+    } else {
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+      const parts = v.data_inicio.split('-');
+      const dataInicio = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+      if (dataInicio < hoje) {
+        ctx.addIssue({ code: "custom", path: ["data_inicio"], message: "A data de início não pode ser anterior a hoje" });
+      }
+    }
     if (!v.dia_preferencial) ctx.addIssue({ code: "custom", path: ["dia_preferencial"], message: "Obrigatório" });
   });
 
 type FormValues = z.infer<typeof schema>;
 
-export function NovaDemandaDialog() {
+interface NovaDemandaDialogProps {
+  isPedido?: boolean;
+}
+
+export function NovaDemandaDialog({ isPedido = false }: NovaDemandaDialogProps) {
   const [open, setOpen] = useState(false);
   const { data: enderecos, isLoading: isLoadingEnderecos, isError: isErrorEnderecos } = useEnderecos();
   const { data: produtos, isLoading: isLoadingProdutos, isError: isErrorProdutos } = useProdutos(); // Usa useProdutos
@@ -71,13 +85,15 @@ export function NovaDemandaDialog() {
       observacao: v.observacao,
       is_recorrente: v.is_recorrente,
     };
+    payload.is_pedido = isPedido;
 
     if (v.is_recorrente) {
       payload.recorrencia = {
         frequencia: v.frequencia as RecorrenciaFrequencia,
+        quantidade_por_periodo: v.quantidade_desejada,
         data_inicio: v.data_inicio!,
         ...(v.data_fim ? { data_fim: v.data_fim } : {}),
-        dia_preferencial: Number(v.dia_preferencial!),
+        dia_preferencial: v.dia_preferencial!.toString(),
       };
     }
 
@@ -93,14 +109,16 @@ export function NovaDemandaDialog() {
     <Dialog open={open} onOpenChange={(o) => { if (!o) { form.reset(RESET_VALUES); } setOpen(o); }}>
       <DialogTrigger asChild>
         <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
-          <Plus className="size-4" /> Nova demanda
+          <Plus className="size-4" /> {isPedido ? "Novo pedido" : "Nova demanda"}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Nova demanda</DialogTitle>
+          <DialogTitle>{isPedido ? "Novo pedido" : "Nova demanda"}</DialogTitle>
           <DialogDescription>
-            Cadastre uma intenção de compra. Marque "recorrente" para automatizar a geração periódica.
+            {isPedido
+              ? "Cadastre um pedido de compra."
+              : "Cadastre uma intenção de compra. Marque \"recorrente\" para automatizar a geração periódica."}
           </DialogDescription>
         </DialogHeader>
 
@@ -214,7 +232,7 @@ export function NovaDemandaDialog() {
           <DialogFooter className="col-span-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
             <Button type="submit" disabled={create.isPending} className="bg-secondary text-secondary-foreground hover:bg-secondary/90">
-              {create.isPending ? "Publicando..." : "Criar demanda"}
+              {create.isPending ? "Publicando..." : isPedido ? "Criar pedido" : "Criar demanda"}
             </Button>
           </DialogFooter>
         </form>

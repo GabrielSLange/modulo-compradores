@@ -34,7 +34,12 @@ function DemandaPage() {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-[95vw] sm:max-w-7xl border-0 p-0 bg-transparent shadow-none" aria-describedby={undefined}>
+      <DialogContent
+        className="max-w-[95vw] sm:max-w-7xl border-0 p-0 bg-transparent shadow-none"
+        aria-describedby={undefined}
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
         <div className="mx-auto w-full rounded-2xl border border-border bg-card shadow-[var(--shadow-elevated)] overflow-hidden flex flex-col max-h-[90vh]">
           <header className="flex items-start justify-between gap-4 border-b border-border px-6 py-5 pr-14">
             <div>

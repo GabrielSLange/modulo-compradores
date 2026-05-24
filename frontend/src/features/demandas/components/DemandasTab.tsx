@@ -70,7 +70,7 @@ export function DemandasTab({ isPedido = false }: DemandasTabProps) {
                 : "Intenções de compra."}
             </p>
           </div>
-          <NovaDemandaDialog />
+          <NovaDemandaDialog isPedido={isPedido} />
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
           <div className="relative flex-1">
