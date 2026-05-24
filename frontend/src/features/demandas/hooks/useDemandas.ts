@@ -23,7 +23,14 @@ export function useDemandas() {
 export function useCreateDemanda() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (payload: CriarDemandaPayload) => criarDemanda(payload),
+    mutationFn: async (payload: CriarDemandaPayload & { is_pedido?: boolean }) => {
+      const { is_pedido, ...rest } = payload;
+      const demanda = await criarDemanda(rest);
+      if (is_pedido) {
+        return await formalizarDemanda(demanda.id);
+      }
+      return demanda;
+    },
     // Optimistic UI: insere a demanda imediatamente; rollback se a API falhar.
     onMutate: async (payload) => {
       await qc.cancelQueries({ queryKey: KEY });
@@ -34,6 +41,7 @@ export function useCreateDemanda() {
         id_empresa_comprador: "emp-1",
         id: "tmp-" + Math.random().toString(36).slice(2, 8),
         status: "aberta",
+        is_pedido: payload.is_pedido || false,
         data_criacao: new Date().toISOString(),
         atualizado_em: new Date().toISOString(),
       };

@@ -23,7 +23,12 @@ export type ConverterWishlistPayload = {
 };
 
 export async function converterWishlist(id: string, payload: ConverterWishlistPayload): Promise<Demanda> {
-  return await api.post<Demanda>(`/api/demandas/wishlist/${id}/converter`, payload);
+  const { id_endereco_entrega, ...rest } = payload as any;
+  const data = {
+    ...rest,
+    id_endereco_destino: id_endereco_entrega || (payload as any).id_endereco_destino,
+  };
+  return await api.post<Demanda>(`/api/demandas/wishlist/${id}/converter`, data);
 }
 
 function normalizeWishlistItem(item: WishlistItem & { convertido_em_demanda?: boolean }): WishlistItem {
