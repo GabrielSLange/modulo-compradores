@@ -16,6 +16,11 @@ def processar_evento_pedido(event_data: dict) -> None:
     if event_data.get("eventType") != "pedido_criado":
         return
 
+    # Anti-loop: ignora pedido_criado publicado pela propria equipe 4
+    # (caso do /promover, onde a gente eh quem cria o pedido).
+    if event_data.get("source") == "modulo-compradores":
+        return
+
     payload = event_data.get("payload", {})
     id_demanda = payload.get("id_demanda")
     if not id_demanda:
