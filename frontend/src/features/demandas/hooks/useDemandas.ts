@@ -9,6 +9,7 @@ import {
   type CriarDemandaPayload,
 } from "@/services/demandaService";
 import type { Demanda, DemandaStatus } from "@/features/types";
+import { ApiError } from "@/services/api";
 
 const KEY = ["demandas"] as const;
 
@@ -97,7 +98,13 @@ export function useFormalizarPedido() {
     },
     onError: (err, _v, ctx) => {
       if (ctx?.prev) qc.setQueryData(KEY, ctx.prev);
-      toast.error("Falha ao formalizar pedido", { description: (err as Error).message });
+      if (err instanceof ApiError && err.status === 422) {
+        toast.error("Estoque insuficiente", {
+          description: "Não foi possível converter esta demanda em pedido pois nenhum fornecedor possui estoque suficiente no momento. A demanda permanece aberta.",
+        });
+      } else {
+        toast.error("Falha ao formalizar pedido", { description: (err as Error).message });
+      }
     },
     onSuccess: () => {
       toast.success("Pedido formalizado com sucesso");
