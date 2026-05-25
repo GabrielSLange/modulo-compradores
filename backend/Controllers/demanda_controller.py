@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import OperationalError
 from typing import List, Optional
 
 from Data.database import SessionLocal
@@ -97,5 +98,10 @@ def promover_demanda_para_pedido(
         return DemandaService.promover_para_pedido(db, fornecimento_db, id_demanda, id_empresa)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
+    except OperationalError:
+        raise HTTPException(
+            status_code=503,
+            detail="Serviço de estoque temporariamente indisponível. Tente novamente em instantes."
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao promover demanda para pedido: {str(e)}")

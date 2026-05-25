@@ -51,7 +51,13 @@ export function useCreateDemanda() {
     },
     onError: (err, _vars, ctx) => {
       if (ctx?.prev) qc.setQueryData(KEY, ctx.prev);
-      toast.error("Não foi possível criar a demanda", { description: (err as Error).message });
+      if (err instanceof ApiError && err.status === 422) {
+        toast.error("Estoque insuficiente", {
+          description: "Não foi possível converter esta demanda em pedido pois nenhum fornecedor possui estoque suficiente no momento. A demanda permanece aberta.",
+        });
+      } else {
+        toast.error("Não foi possível criar a demanda", { description: (err as Error).message });
+      }
     },
     onSuccess: () => toast.success("Demanda criada", { description: "Evento demanda_criada publicado." }),
     onSettled: () => qc.invalidateQueries({ queryKey: KEY }),

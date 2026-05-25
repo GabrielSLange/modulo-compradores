@@ -62,9 +62,9 @@ async function request<T>(
 
   if (!res.ok) {
     const msg =
-      (data && typeof data === "object" && "message" in (data as object)
-        ? String((data as { message?: unknown }).message)
-        : null) ?? `HTTP ${res.status}`;
+      (data && typeof data === "object"
+        ? String((data as { detail?: unknown; message?: unknown }).detail ?? (data as { message?: unknown }).message ?? "")
+        : null) || `HTTP ${res.status}`;
     throw new ApiError(msg, res.status, data);
   }
 
