@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 
 from Data.database import SessionLocal
+from Data.fornecimento_database import FornecimentoSessionLocal
 from DTOs.Request.demanda_create_dto import DemandaCreateDTO
 from DTOs.Response.demanda_response_dto import DemandaResponseDTO
 from Services.demanda_service import DemandaService
@@ -10,9 +11,15 @@ from Security.auth import get_current_empresa_id, get_current_usuario_id
 
 router = APIRouter()
 
-# Função de Injeção de Dependência para pegar a Sessão do Banco (Padrão FastAPI)
 def get_db():
     db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+def get_fornecimento_db():
+    db = FornecimentoSessionLocal()
     try:
         yield db
     finally:
@@ -83,11 +90,12 @@ def cancelar_demanda(
 def promover_demanda_para_pedido(
     id_demanda: str,
     db: Session = Depends(get_db),
+    fornecimento_db: Session = Depends(get_fornecimento_db),
     id_empresa: str = Depends(get_current_empresa_id)
 ):
     try:
-        return DemandaService.promover_para_pedido(db, id_demanda, id_empresa)
+        return DemandaService.promover_para_pedido(db, fornecimento_db, id_demanda, id_empresa)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao promover demanda para pedido: {str(e)}")

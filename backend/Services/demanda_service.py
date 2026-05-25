@@ -1,11 +1,12 @@
 from typing import Optional
 from sqlalchemy.orm import Session
+from sqlalchemy import desc
 from Models.demanda_model import Demanda
 from Models.demanda_recorrencia_model import DemandaRecorrencia
 from DTOs.Request.demanda_create_dto import DemandaCreateDTO
 from DTOs.Response.demanda_response_dto import DemandaResponseDTO
 from Events.Producers.demanda_producer import DemandaProducer
-from sqlalchemy import desc
+from Services.estoque_service import EstoqueService
 
 class DemandaService:
     @staticmethod
@@ -90,7 +91,12 @@ class DemandaService:
         return DemandaResponseDTO.model_validate(demanda)
 
     @staticmethod
-    def promover_para_pedido(db: Session, id_demanda: str, id_empresa_comprador: str) -> DemandaResponseDTO:
+    def promover_para_pedido(
+        db: Session,
+        fornecimento_db: Session,
+        id_demanda: str,
+        id_empresa_comprador: str,
+    ) -> DemandaResponseDTO:
         demanda = db.query(Demanda).filter(
             Demanda.id_demanda == id_demanda,
             Demanda.id_empresa_comprador == id_empresa_comprador
@@ -99,12 +105,25 @@ class DemandaService:
         if not demanda:
             raise ValueError("Demanda não encontrada")
 
-        # Idempotente: se já é pedido, devolve sem alterar nada
         if demanda.is_pedido:
             return DemandaResponseDTO.model_validate(demanda)
 
         if demanda.status == "cancelada":
             raise ValueError("Não é possível promover demanda cancelada para pedido")
+
+        resultado_estoque = EstoqueService.validar_estoque(
+            fornecimento_db=fornecimento_db,
+            id_produto=demanda.id_produto,
+            quantidade_desejada=float(demanda.quantidade_desejada),
+        )
+
+        if not resultado_estoque.valido:
+            demanda.status = "aberta"
+            db.commit()
+            raise ValueError(
+                "Nenhum fornecedor possui estoque suficiente para atender a quantidade desejada. "
+                "A demanda permanece aberta."
+            )
 
         demanda.is_pedido = True
         db.commit()
@@ -116,7 +135,8 @@ class DemandaService:
             "id_produto": demanda.id_produto,
             "quantidade": float(demanda.quantidade_desejada),
             "preco_maximo": float(demanda.preco_maximo) if demanda.preco_maximo else None,
-            "prioridade": demanda.prioridade
+            "prioridade": demanda.prioridade,
+            "id_fornecedor_apto": str(resultado_estoque.id_fornecedor_apto),
         }
         DemandaProducer.publicar_pedido_criado(demanda.id_demanda, payload_evento)
 
