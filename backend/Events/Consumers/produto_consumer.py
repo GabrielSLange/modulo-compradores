@@ -90,8 +90,9 @@ def iniciar_consumidor_produtos():
                 consumer.commit(message=msg)
 
             except Exception as exc:
+                # NAO confirma o offset: erro transitorio (ex: banco fora) deve poder
+                # reprocessar no proximo restart em vez de perder o evento silenciosamente.
                 logger.error("Erro ao processar mensagem do Kafka: %s", exc)
-                consumer.commit(message=msg)
 
     except KeyboardInterrupt:
         logger.info("Consumidor encerrado manualmente.")

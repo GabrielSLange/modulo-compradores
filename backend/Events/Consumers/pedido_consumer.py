@@ -51,7 +51,8 @@ def iniciar_consumidor_pedidos():
     conf = {
         'bootstrap.servers': KAFKA_BOOTSTRAP_SERVERS,
         'group.id': KAFKA_GROUP_ID_PEDIDOS,
-        'auto.offset.reset': 'earliest'
+        'auto.offset.reset': 'earliest',
+        'enable.auto.commit': False,
     }
 
     consumer = Consumer(conf)
@@ -74,9 +75,12 @@ def iniciar_consumidor_pedidos():
             try:
                 event_data = json.loads(msg.value().decode('utf-8'))
                 processar_evento_pedido(event_data)
+                consumer.commit(message=msg)  # so confirma o offset apos processar com sucesso
             except json.JSONDecodeError as e:
                 logger.error(f"JSONDecodeError: {e}")
+                consumer.commit(message=msg)  # payload quebrado: nao adianta reprocessar
             except Exception as e:
+                # NAO confirma: deixa reprocessar no proximo restart, evita perder o evento
                 logger.error(f"Exception processing message: {e}")
 
     except Exception as e:

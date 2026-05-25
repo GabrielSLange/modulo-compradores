@@ -32,13 +32,16 @@ def processar_recorrencias():
             if rec.data_inicio > hoje:
                 continue
 
-            if rec.frequencia == "diária":
+            # Normaliza (lower + tolera acento): o DTO documenta "diaria" sem acento,
+            # mas a comparacao antiga exigia "diária" com acento e nunca batia.
+            freq = (rec.frequencia or "").strip().lower()
+            if freq in ("diaria", "diária"):
                 gerar_hoje = True
-            elif rec.frequencia == "semanal":
+            elif freq == "semanal":
                 # Verifica se o dia da semana de hoje é o mesmo dia da semana em que começou
                 if hoje.weekday() == rec.data_inicio.weekday():
                     gerar_hoje = True
-            elif rec.frequencia == "mensal":
+            elif freq == "mensal":
                 # Verifica se o dia do mês é igual ao dia de início
                 if hoje.day == rec.data_inicio.day:
                     gerar_hoje = True
