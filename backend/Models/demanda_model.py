@@ -22,6 +22,8 @@ class Demanda(Base):
     is_recorrente = Column(Boolean, nullable=False, default=False)
     is_pedido = Column(Boolean, nullable=False, default=False, server_default=expression.false())
     status = Column(String(20), nullable=False, default="aberta")
+    # Motivo do status atual (ex: "negado" via negociacao_fechada). Exibido no front.
+    motivo = Column(Text, nullable=True)
     observacoes = Column(Text, nullable=True)
     data_criacao = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     atualizado_em = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())

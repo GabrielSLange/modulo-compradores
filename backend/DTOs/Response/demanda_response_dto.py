@@ -12,6 +12,7 @@ class DemandaResponseDTO(BaseModel):
     quantidade_desejada: float
     prioridade: str
     status: str
+    motivo: Optional[str] = None
     is_recorrente: bool
     is_pedido: bool
     observacao: Optional[str] = Field(None, validation_alias="observacoes")
