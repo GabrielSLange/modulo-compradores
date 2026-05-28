@@ -8,39 +8,60 @@ Este documento detalha a arquitetura, endpoints, contratos de dados e integraç�
 
 O módulo expõe uma API REST para o Frontend e consome/publica eventos assíncronos via Apache Kafka. 
 
+### Diferença Central: Demanda x Pedido
+
+- **Demanda:** É uma *intenção de compra* aberta ao mercado. O comprador informa o que precisa, mas ainda não há um compromisso firmado com um fornecedor específico.
+- **Pedido:** É uma demanda *efetivada e validada*. Ocorre quando o sistema confirma (via serviço de estoque/fornecimento) que há um fornecedor apto a atender a necessidade. A partir desse momento, o ciclo de faturamento e entrega pode ser iniciado.
+
 ### Fluxos Principais
 
 1. **Criação de Demanda:** 
-   O comprador informa produto, quantidade, prioridade e endereço. Pode ser definida como **recorrente** (diária, semanal, mensal), o que gera um registro de recorrência atrelado.
+   O comprador informa produto, quantidade, prioridade e endereço. 
+   *Recorrência:* Pode ser definida como **recorrente** (diária, semanal, mensal). Uma rotina de background (Cron/Job) avalia periodicamente a tabela de recorrências e gera automaticamente novas demandas conforme o cronograma.
    *Efeito:* Salva no banco e publica evento `demanda_criada` no Kafka.
 
 2. **Fluxo de Wishlist:**
-   O comprador adiciona um produto à wishlist (intenção de compra) de forma simplificada, não sendo obrigatório informar endereço, quantidade e preço máximo.
-   A **conversão** da wishlist para demanda exige que os dados pendentes (endereço, quantidade, prioridade) sejam fornecidos, o que gera uma Demanda real e marca o item da wishlist como `convertido_em_demanda = true`.
+   O comprador adiciona um produto à wishlist (intenção preliminar) de forma simplificada, não sendo obrigatório informar endereço, quantidade e preço máximo. Status inicial é `pendente`.
+   A **conversão** da wishlist para demanda exige que os dados pendentes (endereço, quantidade > 0, prioridade) sejam fornecidos. Isso gera uma nova Demanda real e atualiza o item da wishlist para `convertido_em_demanda = true`.
 
 3. **Fluxo de Demanda para Pedido (Promoção):**
    Uma demanda "aberta" pode ser promovida para "pedido".
-   *Validação:* O `EstoqueService` consulta o banco `fornecimento_db` para garantir que há fornecedor apto a atender a quantidade desejada. Se sim, marca `is_pedido = true`. Se não, falha e a demanda continua aberta.
+   *Validação:* O `EstoqueService` consulta o banco `fornecimento_db` para garantir que há fornecedor apto a atender a quantidade desejada. Se sim, marca `is_pedido = true`. Se não, a transação falha (HTTP 422) e a demanda continua aberta.
    *Efeito:* Publica evento `pedido_criado` no Kafka com a indicação do `id_fornecedor_apto`.
 
 4. **Atualização de Status:**
-   As demandas possuem status: `aberta`, `em_negociacao`, `atendida`, `cancelada`. 
+   As demandas (e pedidos) fluem pelos status: `aberta` -> `em_negociacao` -> `atendida` (ou `cancelada` a qualquer momento). 
    Se o status de um *pedido* for alterado, o sistema publica o evento `pedido_atualizado` no Kafka. Demandas simples (não promovidas) não emitem esse evento na mudança de status.
 
 5. **Consistência Eventual (Produtos e Pedidos):**
-   Consumidores Kafka rodam em background (Threads) para espelhar produtos cadastrados na tabela `produto_cache` (usada como projeção no frontend para evitar dependência síncrona da Equipe 2) e atualizar o status de pedidos quando informados pela Equipe 7.
+   Consumidores Kafka rodam em background (Threads) para espelhar produtos cadastrados na tabela `produto_cache`. Essa estratégia permite alta disponibilidade no frontend (evitando dependência síncrona da Equipe 2) e permite a atualização assíncrona do status de pedidos notificados pela Equipe 7. O lag típico é de poucos milissegundos.
 
 ---
 
-## 🔐 Autenticação JWT
+## 🔐 Autenticação, Autorização e Headers
 
 **MUITO IMPORTANTE:** Todas as rotas protegidas exigem o envio do token no header `Authorization`.
 
-- **Formato:** `Authorization: Bearer <seu_token_jwt>`
-- **Comportamento Esperado:** 
-  - O acesso sem token, com token expirado ou inválido resulta em HTTP `401 Unauthorized`.
-  - O token deve obrigatoriamente conter as claims `sub` (ID do usuário) e `empresa_id` (ID da empresa compradora). Falta destas claims também retorna `401`.
-- **Padrão no Frontend:** A camada HTTP base (`services/api.ts`) injeta automaticamente o cabeçalho `Authorization` recuperado pelo `auth.ts` em toda requisição, exceto quando marcada como anônima. Requisições que retornam `401` provocam a limpeza automática do token, forçando novo login. Os IDs não devem ser passados nos payloads, pois o backend os extrai diretamente do JWT (`get_current_usuario_id`, `get_current_empresa_id`).
+- **Headers Obrigatórios:**
+  - `Authorization: Bearer <seu_token_jwt>`
+  - `Content-Type: application/json` (para métodos POST, PUT, PATCH)
+  - `Accept: application/json`
+- **Isolamento de Dados (Tenant):** 
+  - O token deve obrigatoriamente conter as claims `sub` (ID do usuário) e `empresa_id` (ID da empresa compradora).
+  - **Regra de Ouro:** Uma empresa compradora jamais terá acesso aos dados (demandas, pedidos, wishlist, endereços) de outra empresa. Os endpoints injetam o `empresa_id` implicitamente nas consultas e criações (Data/Tenant Isolation).
+- **Comportamento de Erro:** 
+  - Acesso sem token, token expirado ou sem as claims necessárias resulta em HTTP `401 Unauthorized`.
+  - Tentativa de acesso a um recurso de outra empresa retorna `404 Not Found` (por questões de segurança) ou `403 Forbidden`.
+- **Padrão no Frontend:** A camada HTTP base (`services/api.ts`) injeta automaticamente o cabeçalho `Authorization`. Requisições que retornam `401` limpam o token, forçando novo login. Os IDs de usuário e empresa NÃO devem ser enviados nos payloads.
+
+### Formato Padrão de Erros e Validações
+
+Falhas de validação de payload (ex: `quantidade_desejada` negativa) ou regras de negócio retornam HTTP `400 Bad Request` ou `422 Unprocessable Entity` com o seguinte formato JSON padrão do FastAPI:
+```json
+{
+  "detail": "Mensagem descritiva do erro explicando o motivo da falha."
+}
+```
 
 ---
 
@@ -204,17 +225,21 @@ O módulo utiliza Kafka para a comunicação assíncrona entre domínios.
 
 ### 📥 Eventos Consumidos (Background Jobs)
 
-As rotinas de consumidor rodam em threads assíncronas no contexto do FastAPI (iniciadas no `lifespan`).
+As rotinas de consumidor rodam em threads assíncronas no contexto do FastAPI (iniciadas no `lifespan`). 
+Em caso de falhas transitórias, os consumers implementam retentativas lógicas. Em caso de falha permanente, as mensagens não processadas podem ser direcionadas a uma fila de mensagens mortas (DLQ - Dead Letter Queue) para auditoria, não travando o consumo.
+
 - **Consumer de Produtos (`produto_consumer`):** Escuta tópico de produtos e reflete os dados (nome, código) na tabela `produto_cache`. Apenas consome eventos sem impactar as demandas já criadas.
 - **Consumer de Pedidos (`pedido_consumer`):** Escuta criação/atualização de pedidos (da Equipe 7) para atualizar o status da demanda associada no banco de compradores.
 
 ### 📤 Eventos Produzidos
 
-Os produtores publicam eventos para notificar o ecossistema B2B:
+Os produtores publicam eventos para notificar o ecossistema B2B. O payload sempre viaja no formato JSON serializado:
 
-1. **`demanda_criada`:** Disparado ao criar uma demanda manual, converter wishlist ou via job de demandas recorrentes (`DemandaProducer.publicar_demanda_criada`). Payload inclui quantidade, preço máximo, tipo e prioridade.
-2. **`pedido_criado`:** Disparado pelo processo de promoção. Payload informa a efetivação da demanda em pedido contendo o `id_fornecedor_apto` checado em banco.
-3. **`pedido_atualizado`:** Disparado sempre que o status de uma demanda já promovida (`is_pedido=true`) muda de estado.
+1. **`demanda_criada`:** Disparado ao criar uma demanda manual, converter wishlist ou via job de demandas recorrentes (`DemandaProducer.publicar_demanda_criada`). 
+   *Payload Real:* Inclui `id_demanda`, `id_produto`, `quantidade_desejada`, `preco_maximo`, `prioridade`, e timestamp de criação.
+2. **`pedido_criado`:** Disparado pelo processo de promoção. 
+   *Payload Real:* Informa a efetivação da demanda contendo o `id_demanda`, `id_produto`, quantidade e o `id_fornecedor_apto` checado no banco da equipe de fornecimento.
+3. **`pedido_atualizado`:** Disparado sempre que o status de uma demanda já promovida (`is_pedido=true`) muda de estado (ex: para `atendida` ou `em_negociacao`).
 
 ---
 

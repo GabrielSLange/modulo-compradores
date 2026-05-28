@@ -80,16 +80,20 @@ A aplicação utiliza JWT (JSON Web Tokens) e depende exclusivamente do backend 
 
 A camada de interface gráfica (`components`) nunca chama requisições nativas de HTTP ou conhece URLs de endpoints. O fluxo é totalmente unidirecional através das camadas do frontend:
 
-1. A **UI (Components)** despacha intenções através de chamadas aos **Hooks (React Query)**.
-2. Os **Hooks (`useDemandas`, etc.)** organizam cache, _optimistic updates_ (Interface Otimista) e invalidações de query, fazendo a ponte final disparando métodos dos **Services**.
-3. Os **Services (`demandaService.ts`)** possuem a assinatura dos métodos (por exemplo: `criarDemanda(payload)`), preparam o corpo da requisição e adaptam dados legados — ex: o formulário envia `id_endereco_entrega`, e o serviço converte para a chave `id_endereco_destino` que o backend exige.
-4. Por fim, o **`api.ts`** dispara o `fetch` acoplando `headers` necessários.
+### Fluxo Completo: Da UI até a API
+1. **Ação do Usuário:** O usuário clica em um botão (ex: "Converter Wishlist" ou "Criar Demanda").
+2. **Validação UI:** O `React Hook Form` + `Zod` validam as entradas localmente. Se inválidas, a execução para e exibe os erros no formulário.
+3. **Hook (React Query):** A UI despacha a intenção chamando o `mutate` do hook correspondente.
+4. **Otimismo (`onMutate`):** O hook aplica uma _Optimistic Update_, atualizando a tela imediatamente antes de consultar o servidor. O estado de carregamento (`isPending`) é ativado.
+5. **Service Layer:** O hook delega o envio de dados aos **Services** (ex: `demandaService.ts`). O Service converte chaves se necessário (ex: `id_endereco_entrega` -> `id_endereco_destino`).
+6. **Client HTTP (`api.ts`):** Prepara a requisição anexando o JWT no `Authorization`, o `Content-Type: application/json` e dispara contra a API.
+7. **Resposta do Backend:**
+   - **Sucesso (20x):** O backend (ou Kafka) consolida os dados. O frontend comemora o sucesso (`onSuccess`), dispara o `invalidateQueries` para atualizar os caches no background (Eventual Consistency) e emite um Toast de sucesso.
+   - **Falha (4xx/5xx):** A execução cai no `onError`. O erro é formatado, a interface sofre **Rollback** (revertendo o optimistic update para o estado seguro `ctx.prev`) e um Toast de erro é disparado.
 
-### Otimismo na Interface (Optimistic Updates)
-
-Para melhoria de UX, ações interativas não bloqueiam a tela esperando a resposta do backend. Hooks de mutação (como `useCreateDemanda`, `useUpdateStatus`, `useFormalizarPedido`) injetam os dados de estado esperado diretamente no cache local do TanStack Query na fase `onMutate`. 
-- Caso a API do servidor retorne sucesso, o backend consolida os dados e a query sofre refetch transparente (`invalidateQueries`).
-- Caso a API apresente falha (ex: `422 Estoque insuficiente` ao formalizar pedido), o hook reverte magicamente (`rollback`) a lista local para seu estado anterior salvo na memória (`ctx.prev`) e o componente `Sonner` projeta a mensagem de erro. **Nota:** No otimismo de criação, o objeto virtual criado pode utilizar UUIDs mockados (`u-1`) antes da consolidação do backend, porém esse objeto simulado nunca trafega para o backend.
+### Tratamento de Falhas (Error Handling) e Fallbacks
+- Requisições não-sucesso sempre são encapsuladas num `ApiError` formatado. Telas de listas que falham no carregamento primário contam com `ErrorBoundaries` ou _Fallbacks_ graciosos que oferecem a opção "Tentar Novamente".
+- Quando há falhas de rede globais ou o token não pode ser validado, o sistema alerta e recua as ações.
 
 ---
 
@@ -98,9 +102,11 @@ Para melhoria de UX, ações interativas não bloqueiam a tela esperando a respo
 A Home principal (`index.tsx`) divide a aplicação em quatro abas fundamentais. A tabela de listagens compartilha lógicas de paginação e pagina no front-end, fatiando de `10` a `15` itens por vez.
 
 ### 5.1. Aba: Demandas
-Exibe as **intenções de compra** não finalizadas. Utiliza o componente interno `<DemandasTab />` (passando o prop padrão de falsidade para `isPedido`).
-- **Nova Demanda:** Aciona um dialog que, através do `Zod`, só obriga as datas de periodicidade se a checkbox "Demanda Recorrente" for marcada (`superRefine`).
-- **Busca Conjunta:** Permite filtrar via barra de pesquisa buscando no ID alfanumérico da própria demanda ou consultando no nome do produto em _cache local_.
+Exibe as **intenções de compra** não finalizadas. Utiliza o componente interno `<DemandasTab />` (passando o prop padrão `isPedido={false}`).
+- **Nova Demanda (Dialogs):** Aciona um dialog altamente controlado (aberto/fechado via React State `useState`). Através do `Zod`, o formulário valida as datas de periodicidade apenas se a checkbox "Demanda Recorrente" for marcada (`superRefine`).
+- **Filtros e Busca Conjunta:** 
+  - *Filtros Locais vs Servidor:* A busca por texto funciona no client-side vasculhando o ID da demanda e buscando no nome do produto vindo do _cache_ na memória.
+  - *Filtros de Status:* Componentes UI permitem isolar as exibições (ex: apenas `aberta`, `cancelada`). Esses filtros afetam o array já cacheados localmente, resultando em atualizações visuais em tempo real, sem bater na API.
 - **Ações:** "Visualizar detalhes", "Cancelar", ou "Formalizar Pedido". 
   - **Formalização em Pedido (Validação de Estoque):** A promoção de uma demanda a pedido **não é incondicional**. Ela só ocorre se o serviço de estoque confirmar que existe fornecedor apto a suprir a `quantidade_desejada`. Se não houver, a API retorna `422` e o frontend intercepta o erro (`useDemandas.ts`), exibindo o alerta "Estoque insuficiente" e mantendo a demanda no status `aberta`.
 
@@ -114,8 +120,8 @@ Intenções "soltas". Itens desejados onde a quantidade desejada, preço ou prio
 - **Conversão (`useConvertWishlist`):** A qualquer momento o comprador pode clicar em "Converter", momento onde o frontend forçará o input do localizador ("Endereço de entrega"). Quando bem sucedido, a chamada limpa (invalida) não só o cache do Wishlist mas também do `useDemandas` para que a demanda criada brote instantaneamente na primeira aba.
 
 ### 5.4. Aba: Endereços
-Listagem tradicional em tabela. Um único modal `EnderecoDialog.tsx` atende a criação e a edição. Se nenhuma prop contendo os dados base do endereço é fornecida ao `<EnderecoDialog />`, ele funciona em modo Inserção; caso contrário, é preenchido como Update.
-A deleção de endereços envia um verbo `DELETE` e aguarda retorno `204`, que no backend reflete num _soft delete_.
+Listagem tradicional em tabela. Um único modal `EnderecoDialog.tsx` atende a criação e a edição, controlado via propriedades React (se prop de `endereco_base` estiver presente, assume edição, preenchendo o React Hook Form; senão, entra vazio como criação).
+A deleção logicamente deleta na API (HTTP `204`) e expurga o item dos caches locais via `optimistic update`.
 
 ---
 
@@ -130,11 +136,20 @@ Em vez disso:
 
 ---
 
-## 7. Refetch e Revalidação 
+## 7. Estados de Loading, Refetch e Revalidação
 
-O cache da API no TanStack Query é balanceado pela propriedade `staleTime`. Atualmente, não ocorre *polling infinito constante*, poupando performance na máquina e nos servidores, seguindo a diretriz:
-- `useDemandas`: Mantém os dados frescos e imutáveis por **4 segundos**.
-- `useWishlist`: Mantém os dados por **5 segundos**.
-- `useEnderecos`: Mantém os dados por **30 segundos** (endereços raramente mudam em tempo real).
+O front-end adota práticas para não deixar a interface travada durante operações e sincronias.
 
-Para revalidações em tela, as listagens fornecem o botão **"Refresh"** (`<RefreshCw />`) que aciona nativamente a reobtenção (`refetch()`). Eventuais implementações de WebSocket poderão facilmente espetar as suas `subscriptions` chamando os métodos `queryClient.setQueryData` ou `queryClient.invalidateQueries` para plugar o tempo real exato sem necessitar refatorar o React.
+### Experiência de Carregamento (Loading States)
+- **Buscas Iniciais:** Sempre que a Query não tem cache (primeira visita), componentes `<Skeleton />` são renderizados para delinear os grids e tabelas, mantendo o layout contínuo.
+- **Botões e Ações:** Operações assíncronas (como _submit_ no formulário ou remoção de um item) injetam prop de estado de _loading_ (`isPending` ou `isFetching`) nos botões, muitas vezes desabilitando-os e exibindo ícones de _spinner_.
+
+### Refetch Estratégico (React Query)
+O cache (`gcTime` - Garbage Collection) segura os dados na memória caso a aba fique inativa, mas o momento da **revalidação silenciosa** é definido pelo `staleTime`. Evitamos o *polling infinito agressivo* poupando recursos:
+- `useDemandas`: Mantém os dados frescos por **4 segundos**.
+- `useWishlist`: Mantém os dados frescos por **5 segundos**.
+- `useEnderecos`: Mantém os dados frescos por **30 segundos**.
+
+Além do limite de tempo, o hook está configurado para **`refetchOnWindowFocus`**: assim que o comprador muda de aba no navegador e volta ao portal B2B, as requisições que estão *stale* (vencidas) regerem-se automaticamente por baixo dos panos, piscando eventuais atualizações feitas pelo Kafka no banco de dados.
+
+Para revalidação manual sob-demanda, as tabelas também dispõem do botão **"Refresh"** explícito (`<RefreshCw />`) chamando `refetch()`.
