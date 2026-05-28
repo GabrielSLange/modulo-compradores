@@ -116,7 +116,7 @@ Isso filtra o backend pelas demandas cujo flag `is_pedido` seja verde, identific
 - **Criar Pedido Direto:** É possível criar um pedido diretamente clicando em "Novo pedido" a partir desta aba. O frontend reutiliza o componente `NovaDemandaDialog` informando a prop `isPedido=true`. O hook `useCreateDemanda` realiza uma **operação em duas etapas**: ele cria a demanda normal e **imediatamente** aciona a rota de formalização (`promover`). Caso a promoção falhe (ex: falta de estoque de fornecedor), a UI captura o erro `422`, aborta o status de pedido e avisa o comprador.
 
 ### 5.3. Aba: Wishlist
-Intenções "soltas". Itens desejados onde a quantidade desejada, preço ou prioridade são, num primeiro momento, **opcionais**. Não existe vínculo imediato de endereço.
+Intenções "soltas" de compra, onde o usuário informa o produto, quantidade desejada e observação. Não existe vínculo imediato de endereço.
 - **Conversão (`useConvertWishlist`):** A qualquer momento o comprador pode clicar em "Converter", momento onde o frontend forçará o input do localizador ("Endereço de entrega"). Quando bem sucedido, a chamada limpa (invalida) não só o cache do Wishlist mas também do `useDemandas` para que a demanda criada brote instantaneamente na primeira aba.
 
 ### 5.4. Aba: Endereços
