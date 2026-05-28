@@ -26,7 +26,7 @@ O módulo expõe uma API REST para o Frontend e consome/publica eventos assíncr
 
 3. **Fluxo de Demanda para Pedido (Promoção):**
    Uma demanda "aberta" pode ser promovida para "pedido".
-   *Validação:* O `EstoqueService` consulta o banco `fornecimento_db` para garantir que há fornecedor apto a atender a quantidade desejada. Se sim, marca `is_pedido = true`. Se não, a transação falha (HTTP 422) e a demanda continua aberta.
+   *Validação:* O sistema verifica a disponibilidade de fornecimento para garantir que existe algum fornecedor apto a atender a quantidade desejada. Se sim, marca `is_pedido = true`. Se não, a transação falha (HTTP 422) e a demanda continua aberta.
    *Efeito:* Publica evento `pedido_criado` no Kafka com a indicação do `id_fornecedor_apto`.
 
 4. **Atualização de Status:**
@@ -117,7 +117,7 @@ Cancela uma demanda (atualiza o status para `cancelada`).
 - **Response (200 OK):** Retorna o `DemandaResponseDTO` atualizado.
 
 #### `PATCH /{id_demanda}/promover`
-Promove uma demanda aberta a pedido. O serviço checa disponibilidade no banco de estoque `fornecimento_db`.
+Promove uma demanda aberta a pedido. O serviço checa a disponibilidade com o serviço de fornecimento correspondente.
 - **Validações e Erros:** 
   - `400 Bad Request` ou `422 Unprocessable Entity`: Demanda não encontrada, ou cancelada, ou nenhum fornecedor com estoque apto.
   - `503 Service Unavailable`: Falha de conexão com serviço de estoque.
@@ -238,7 +238,7 @@ Os produtores publicam eventos para notificar o ecossistema B2B. O payload sempr
 1. **`demanda_criada`:** Disparado ao criar uma demanda manual, converter wishlist ou via job de demandas recorrentes (`DemandaProducer.publicar_demanda_criada`). 
    *Payload Real:* Inclui `id_demanda`, `id_produto`, `quantidade_desejada`, `preco_maximo`, `prioridade`, e timestamp de criação.
 2. **`pedido_criado`:** Disparado pelo processo de promoção. 
-   *Payload Real:* Informa a efetivação da demanda contendo o `id_demanda`, `id_produto`, quantidade e o `id_fornecedor_apto` checado no banco da equipe de fornecimento.
+   *Payload Real:* Informa a efetivação da demanda contendo o `id_demanda`, `id_produto`, quantidade e o `id_fornecedor_apto` correspondente.
 3. **`pedido_atualizado`:** Disparado sempre que o status de uma demanda já promovida (`is_pedido=true`) muda de estado (ex: para `atendida` ou `em_negociacao`).
 
 ---
