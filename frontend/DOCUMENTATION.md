@@ -1,319 +1,140 @@
 # Módulo Equipe 4 — Demanda (Front-End)
 
-Documentação técnica do front-end do microserviço **SDI.Micro.Demanda**, parte de um sistema B2B distribuído baseado em microserviços e Kafka.
+Documentação técnica do front-end do microserviço **SDI.Micro.Demanda**, responsável pela interface de gestão de Demandas (intenções de compra), Pedidos, Wishlist e Endereços de Entrega das empresas compradoras.
+
+O front-end foi projetado de forma **totalmente desacoplada** do back-end, adotando a filosofia **Feature-First** para organizar componentes e lógicas por domínio, além de empregar **consistência eventual** para exibir dados de outros módulos (como os dados de Produtos da Equipe 2, que vêm através de projeções atualizadas via Kafka).
 
 ---
 
-## 1. Visão Geral
-
-Este módulo é responsável pela interface de gestão de **Demandas** (intenções de compra), **Wishlist** (itens desejados) e **Endereços de Entrega** das empresas compradoras.
-
-O front foi construído de forma **totalmente desacoplada** do back-end, tratando dados de outros bounded contexts (ex.: Produto, da Equipe 2) como **projeções locais** alimentadas por eventos Kafka. Isso significa que a UI precisa lidar com **consistência eventual** — um `id_produto` pode existir em uma demanda sem que os dados completos do produto já tenham sido sincronizados localmente.
-
----
-
-## 2. Stack Tecnológica
+## 1. Stack Tecnológica
 
 | Camada | Tecnologia |
 |---|---|
 | Linguagem | TypeScript |
-| Framework | React 19 + TanStack Start (SSR) + Vite 7 |
+| Framework | React 19 + Vite |
 | Roteamento | TanStack Router (file-based) |
-| Estado server-side | TanStack Query (cache, polling, optimistic UI) |
-| Estilização | Tailwind CSS v4 + design tokens em `src/styles.css` |
+| Gerenciamento de Estado | TanStack Query (cache, refetching, optimistic UI) |
+| Estilização | Tailwind CSS v4 + design tokens globais |
 | Componentes | shadcn/ui (Radix Primitives) |
-| Validação | Zod (com `superRefine` para regras condicionais) |
+| Validação de Formulários | Zod e React Hook Form |
 | Datas | date-fns |
 | Ícones | lucide-react |
 | Notificações | sonner (toasts) |
 
 ---
 
-## 3. Arquitetura de Pastas
+## 2. Arquitetura e Estrutura de Pastas
+
+A arquitetura do projeto segue a divisão **Feature-First**. O código relacionado a uma parte específica do domínio fica confinado em seu diretório de "feature", não misturando as responsabilidades lógicas entre domínios diferentes.
 
 ```text
 src/
 ├── components/
-│   └── ui/
-│       ├── async-select.tsx        # Select reutilizável com estados loading/error/empty
-│       └── ...                     # Demais componentes shadcn/ui
+│   ├── theme-provider.tsx          # Provider para Dark/Light mode
+│   └── ui/                         # Componentes genéricos de UI (shadcn/ui + AsyncSelect)
 │
-├── features/
-│   ├── types.ts                    # Tipos do domínio compartilhados entre todas as features
-│   │
+├── features/                       # Módulos de domínio da aplicação
+│   ├── tipos genéricos
+│   │   └── types.ts                # Definições de interfaces base e DTOs mapeados no frontend
 │   ├── demandas/
-│   │   ├── components/
-│   │   │   ├── DemandasTab.tsx         # Listagem + filtros (ID/produto) + ações
-│   │   │   ├── NovaDemandaDialog.tsx   # Formulário de criação (Zod + superRefine)
-│   │   │   ├── VisualizarDemandaDialog.tsx  # Detalhes completos de uma demanda
-│   │   │   └── StatusBadge.tsx         # Badge visual por status
-│   │   ├── hooks/
-│   │   │   └── useDemandas.ts          # useQuery + useMutation (create/updateStatus) com optimistic UI
-│   │   └── mocks/
-│   │       └── store.ts                # Dados de seed para desenvolvimento local
-│   │
+│   │   ├── components/             # DemandasTab, NovaDemandaDialog, StatusBadge, etc.
+│   │   └── hooks/                  # useDemandas (queries e optimistic mutations)
 │   ├── enderecos/
-│   │   ├── components/
-│   │   │   ├── EnderecosTab.tsx        # Tabela de endereços + ações de editar/excluir
-│   │   │   └── EnderecoDialog.tsx      # Formulário de criação/edição de endereço
-│   │   └── hooks/
-│   │       └── useEnderecos.ts         # useQuery + mutations (create/update/delete)
-│   │
+│   │   ├── components/             # EnderecosTab, EnderecoDialog
+│   │   └── hooks/                  # useEnderecos
 │   ├── produtos/
-│   │   ├── components/
-│   │   │   └── ProdutoCell.tsx         # Renderização da projeção local de Produto
-│   │   └── hooks/
-│   │       └── useProduto.ts           # useQuery para listar projeções de produtos
-│   │
+│   │   ├── components/             # ProdutoCell (projeção assíncrona)
+│   │   └── hooks/                  # useProduto
 │   └── wishlist/
-│       ├── components/
-│       │   └── WishlistTab.tsx         # Listagem + formulário de adição + conversão em demanda
-│       └── hooks/
-│           └── useWishlist.ts          # useQuery + mutations (add/convert)
+│       ├── components/             # WishlistTab
+│       └── hooks/                  # useWishlist
 │
-├── services/
-│   ├── api.ts              # Cliente HTTP genérico (fetch wrapper com JWT e ApiError)
-│   ├── auth.ts             # Gerenciamento de token JWT (get/set/clear no localStorage)
-│   ├── demandaService.ts   # Funções HTTP do domínio Demanda
-│   ├── enderecoService.ts  # Funções HTTP do domínio Endereço
-│   ├── produtoService.ts   # Funções HTTP do domínio Produto (projeção local)
-│   └── wishlistService.ts  # Funções HTTP do domínio Wishlist
+├── services/                       # Camada de abstração HTTP (Comunicação estrita via api.ts)
+│   ├── api.ts                      # Cliente base (injetor de JWT, tratador de ApiError)
+│   ├── auth.ts                     # Persistência de token no LocalStorage
+│   ├── demandaService.ts           # Endpoints do domínio Demandas
+│   ├── enderecoService.ts          # Endpoints do domínio Endereços
+│   ├── produtoService.ts           # Endpoints de leitura da projeção de Produtos
+│   └── wishlistService.ts          # Endpoints do domínio Wishlist
 │
-├── routes/
-│   ├── __root.tsx          # Shell da aplicação + QueryClientProvider + Toaster
-│   └── index.tsx           # Página principal com as três abas (Tabs)
+├── routes/                         # Definições de roteamento do TanStack Router
+│   ├── __root.tsx                  # Root layout, injetor de Providers e interceptador de JWT
+│   └── index.tsx                   # Rota "/" que orquestra as Tabs (Demandas, Pedidos, Wishlist, Endereços)
 │
-└── styles.css              # Design tokens globais (Midnight Green + Orange CTA)
+└── styles.css                      # Estilos globais e tokens de cores
 ```
 
-### Princípio de Organização: Feature-First
+---
 
-Cada feature é **autocontida**: componentes, hooks e lógica de UI ficam dentro da pasta da feature, enquanto a comunicação com a API é responsabilidade exclusiva da camada `services/`. Isso significa:
+## 3. Autenticação JWT
 
-- **Components** só enxergam **hooks** — nunca chamam `services` diretamente.
-- **Hooks** só enxergam **services** — nunca fazem `fetch` diretamente.
-- **Services** só enxergam `api.ts` — nunca usam React.
+A aplicação utiliza JWT (JSON Web Tokens) e depende exclusivamente do backend para decodificar e ler as *claims* de identificação do usuário e da empresa. Nenhum ID do usuário é enviado manualmente nos corpos de requisição (`payloads`).
+
+- **Recepção do Token:** Ao navegar para o portal, a URL pode conter um parâmetro de busca `?jwt=<token>`. O layout raiz `__root.tsx` captura isso no momento em que a aplicação é montada, invoca o `setToken` (salvando no LocalStorage) e remove o parâmetro silenciosamente alterando a URL via `window.history.replaceState`.
+- **Injeção nas Requisições:** O wrapper `api.ts` lê automaticamente o LocalStorage (`getToken()`). Se houver um token válido, o cabeçalho `Authorization: Bearer <token>` é anexado na request.
+- **Expiração / Erro de Autorização:** Se qualquer chamada retornar o HTTP status `401 Unauthorized`, o cliente `api.ts` automaticamente invoca `clearToken()`, invalidando a sessão no frontend de forma imediata.
 
 ---
 
-## 4. Camada de Serviços (`src/services/`)
+## 4. Comunicação e Integração de APIs
 
-### 4.1. `api.ts` — Cliente HTTP
+A camada de interface gráfica (`components`) nunca chama requisições nativas de HTTP ou conhece URLs de endpoints. O fluxo é totalmente unidirecional através das camadas do frontend:
 
-Wrapper genérico sobre `fetch`. Responsabilidades:
-- Anexa `Content-Type: application/json` automaticamente.
-- Injeta o JWT (quando existir) via header `Authorization: Bearer <token>`.
-- Lança `ApiError` em respostas não-2xx, carregando o `status` HTTP e o payload do erro.
-- Em `401`, chama `clearToken()` para forçar novo login.
-- Usa rotas **sempre relativas** (`/api/...`) para que o Nginx/Gateway faça o proxy.
+1. A **UI (Components)** despacha intenções através de chamadas aos **Hooks (React Query)**.
+2. Os **Hooks (`useDemandas`, etc.)** organizam cache, _optimistic updates_ (Interface Otimista) e invalidações de query, fazendo a ponte final disparando métodos dos **Services**.
+3. Os **Services (`demandaService.ts`)** possuem a assinatura dos métodos (por exemplo: `criarDemanda(payload)`), preparam o corpo da requisição e adaptam dados legados — ex: o formulário envia `id_endereco_entrega`, e o serviço converte para a chave `id_endereco_destino` que o backend exige.
+4. Por fim, o **`api.ts`** dispara o `fetch` acoplando `headers` necessários.
 
-```ts
-// Exemplo de uso
-const demandas = await api.get<Demanda[]>("/api/demandas");
-const nova = await api.post<Demanda>("/api/demandas", payload);
-await api.patch(`/api/demandas/${id}/cancelar`);
-await api.delete(`/api/demandas/enderecos/${id}`);
-```
+### Otimismo na Interface (Optimistic Updates)
 
-### 4.2. `auth.ts` — Gerenciamento de Token
-
-Abstrai o acesso ao `localStorage` para o token JWT. Funções: `getToken()`, `setToken(t)`, `clearToken()`.
-
-> **Nota:** A autenticação é baseada em JWT. O backend extrai `id_usuario` (sub) e `id_empresa` diretamente do token. A camada de serviços no frontend não precisa mais enviar esses IDs no corpo da requisição, o `api.ts` cuida de injetar o cabeçalho `Authorization: Bearer <token>`. Para testes locais, pode-se gerar um token com o script `backend/gerar_token_teste.py` e salvar no localStorage.
-
-### 4.3. Services de Domínio
-
-Cada arquivo de service encapsula as chamadas HTTP de um domínio e **traduz nomes de campo** quando necessário (ex.: o frontend usa `id_endereco_entrega` internamente, mas o backend espera `id_endereco_destino` — essa tradução ocorre em `criarDemanda()`).
-
-| Arquivo | Rota base | Operações |
-|---|---|---|
-| `demandaService.ts` | `/api/demandas` | listar, criar, cancelar, atualizar status, formalizar (promover a pedido) |
-| `enderecoService.ts` | `/api/demandas/enderecos` | listar, criar, atualizar, excluir (soft delete) |
-| `produtoService.ts` | `/api/demandas/produtos` | listar projeções locais |
-| `wishlistService.ts` | `/api/demandas/wishlist` | listar, adicionar, converter em demanda |
+Para melhoria de UX, ações interativas não bloqueiam a tela esperando a resposta do backend. Hooks de mutação (como `useCreateDemanda`, `useUpdateStatus`, `useFormalizarPedido`) injetam os dados de estado esperado diretamente no cache local do TanStack Query na fase `onMutate`. 
+- Caso a API do servidor retorne sucesso, o backend consolida os dados e a query sofre refetch transparente (`invalidateQueries`).
+- Caso a API apresente falha (ex: `422 Estoque insuficiente` ao formalizar pedido), o hook reverte magicamente (`rollback`) a lista local para seu estado anterior salvo na memória (`ctx.prev`) e o componente `Sonner` projeta a mensagem de erro. **Nota:** No otimismo de criação, o objeto virtual criado pode utilizar UUIDs mockados (`u-1`) antes da consolidação do backend, porém esse objeto simulado nunca trafega para o backend.
 
 ---
 
-## 5. Domínio e Entidades (`src/features/types.ts`)
+## 5. Fluxos Visuais: As Quatro Abas (Tabs)
 
-Os tipos espelham o DBML do banco isolado do serviço:
+A Home principal (`index.tsx`) divide a aplicação em quatro abas fundamentais. A tabela de listagens compartilha lógicas de paginação e pagina no front-end, fatiando de `10` a `15` itens por vez.
 
-- **`Demanda`** — intenção de compra. Pode ser **única** ou **recorrente**. Status: `aberta | em_negociacao | atendida | cancelada`. Usa `id_endereco_entrega` como referência ao endereço de destino.
-- **`DemandaRecorrencia`** — `frequencia` (`diaria | semanal | mensal`), `data_inicio`, `data_fim?`, `dia_preferencial`.
-- **`WishlistItem`** — item desejado, conversível em Demanda. Mantém `convertida_em_demanda` e `id_demanda_gerada`.
-- **`EnderecoEntrega`** — endereço da empresa compradora, usado como destino da demanda.
-- **`ProdutoProjecao`** — **projeção local** de Produto (Equipe 2). Alimentada por eventos Kafka. Pode estar ausente quando o evento ainda não foi consumido.
+### 5.1. Aba: Demandas
+Exibe as **intenções de compra** não finalizadas. Utiliza o componente interno `<DemandasTab />` (passando o prop padrão de falsidade para `isPedido`).
+- **Nova Demanda:** Aciona um dialog que, através do `Zod`, só obriga as datas de periodicidade se a checkbox "Demanda Recorrente" for marcada (`superRefine`).
+- **Busca Conjunta:** Permite filtrar via barra de pesquisa buscando no ID alfanumérico da própria demanda ou consultando no nome do produto em _cache local_.
+- **Ações:** "Visualizar detalhes", "Cancelar", ou "Formalizar Pedido". 
+  - **Formalização em Pedido (Validação de Estoque):** A promoção de uma demanda a pedido **não é incondicional**. Ela só ocorre se o serviço de estoque confirmar que existe fornecedor apto a suprir a `quantidade_desejada`. Se não houver, a API retorna `422` e o frontend intercepta o erro (`useDemandas.ts`), exibindo o alerta "Estoque insuficiente" e mantendo a demanda no status `aberta`.
 
----
+### 5.2. Aba: Pedidos
+Reutiliza o componente base como `<DemandasTab isPedido={true} />`. 
+Isso filtra o backend pelas demandas cujo flag `is_pedido` seja verde, identificando intenções que já passaram pelo crivo do serviço de fornecimento e que, no back, dispararam os eventos na malha Kafka para aprovação das demais equipes. Aqui, as ações mudam: você não pode mais formalizar um pedido, apenas acompanhar os status: `em_negociacao` e `atendida`.
+- **Criar Pedido Direto:** É possível criar um pedido diretamente clicando em "Novo pedido" a partir desta aba. O frontend reutiliza o componente `NovaDemandaDialog` informando a prop `isPedido=true`. O hook `useCreateDemanda` realiza uma **operação em duas etapas**: ele cria a demanda normal e **imediatamente** aciona a rota de formalização (`promover`). Caso a promoção falhe (ex: falta de estoque de fornecedor), a UI captura o erro `422`, aborta o status de pedido e avisa o comprador.
 
-## 6. Estratégia de Consistência Eventual
+### 5.3. Aba: Wishlist
+Intenções "soltas". Itens desejados onde a quantidade desejada, preço ou prioridade são, num primeiro momento, **opcionais**. Não existe vínculo imediato de endereço.
+- **Conversão (`useConvertWishlist`):** A qualquer momento o comprador pode clicar em "Converter", momento onde o frontend forçará o input do localizador ("Endereço de entrega"). Quando bem sucedido, a chamada limpa (invalida) não só o cache do Wishlist mas também do `useDemandas` para que a demanda criada brote instantaneamente na primeira aba.
 
-### 6.1. Polling de eventos Kafka
-
-Enquanto o WebSocket de eventos não existe, `useDemandas` usa `refetchInterval: 8000` para simular a reatividade do barramento:
-
-```ts
-useQuery({
-  queryKey: ["demandas"],
-  queryFn: () => listarDemandas(),
-  refetchInterval: 8000,
-  staleTime: 4000,
-});
-```
-
-Quando o backend implementar WebSocket, basta substituir por uma `subscription` e chamar `queryClient.setQueryData(["demandas"], novaLista)` no callback.
-
-### 6.2. Projeção local de Produto (`ProdutoCell`)
-
-O componente lida com **três estados** de forma elegante:
-
-| Estado | Renderização |
-|---|---|
-| `loading` | `Skeleton` (cache local sendo lido) |
-| sincronizado | nome + código + categoria + unidade |
-| inexistente | fallback **"Produto não identificado"** + `id_produto` em monoespaço |
+### 5.4. Aba: Endereços
+Listagem tradicional em tabela. Um único modal `EnderecoDialog.tsx` atende a criação e a edição. Se nenhuma prop contendo os dados base do endereço é fornecida ao `<EnderecoDialog />`, ele funciona em modo Inserção; caso contrário, é preenchido como Update.
+A deleção de endereços envia um verbo `DELETE` e aguarda retorno `204`, que no backend reflete num _soft delete_.
 
 ---
 
-## 7. Componentes Reutilizáveis (`src/components/ui/`)
+## 6. Projeção de Produtos (Integração Indireta)
 
-### `AsyncSelect`
-
-Componente wrapper sobre o `Select` do shadcn/ui que abstrai os estados assíncronos:
-
-```tsx
-<AsyncSelect
-  value={form.watch("id_produto")}
-  onValueChange={(v) => form.setValue("id_produto", v)}
-  isLoading={isLoadingProdutos}
-  isError={isErrorProdutos}
-  options={produtos?.map((p) => ({ value: p.id, label: p.nome }))}
-  placeholder="Selecione um produto"
-  loadingMessage="Carregando produtos..."
-  errorMessage="Erro ao carregar produtos"
-  emptyMessage="Nenhum produto cadastrado"
-/>
-```
-
-Props:
-
-| Prop | Tipo | Descrição |
-|---|---|---|
-| `value` | `string?` | Valor selecionado (controlado) |
-| `onValueChange` | `(v: string) => void` | Callback de seleção |
-| `isLoading` | `boolean?` | Exibe mensagem de loading e desabilita |
-| `isError` | `boolean?` | Exibe mensagem de erro e desabilita |
-| `options` | `{ value, label }[]?` | Lista de opções |
-| `placeholder` | `string?` | Texto quando nenhuma opção está selecionada |
-| `loadingMessage` | `string?` | Texto exibido durante o carregamento |
-| `errorMessage` | `string?` | Texto exibido em caso de erro |
-| `emptyMessage` | `string?` | Texto quando não há opções disponíveis |
-
-> **Nota de implementação:** O componente usa `key={value || "__empty__"}` para forçar remontagem quando o formulário é resetado para `""`, evitando o warning do React sobre componentes alternando entre controlled/uncontrolled.
+Como a Equipe 4 (Demandas) depende do cadastro oficial gerido pela Equipe 2 (Catálogo) que comunica pelo Kafka, o frontend **não fará chamadas síncronas HTTP caindo se o serviço da Equipe 2 estiver fora.**
+Em vez disso:
+- O frontend consome `/api/demandas/produtos/projecao` na nossa própria base (que é mantida populada por *background jobs* no backend ouvindo o Kafka).
+- A UI utiliza o componente tolerante a falhas `<ProdutoCell />`.
+  - Se a resposta assíncrona estiver carregando, projeta um `Skeleton`.
+  - Se o `id_produto` não retornar nada na busca (produto ainda não chegou no cache ou foi excluído), o frontend degrada graciosamente exibindo texto monoespaçado "Produto não identificado" ou "N/D", permitindo uso ininterrupto da plataforma.
 
 ---
 
-## 8. UX Assíncrona
+## 7. Refetch e Revalidação 
 
-- **Optimistic UI** em `useCreateDemanda` e `useUpdateStatus`: a alteração aparece **imediatamente** na lista; em caso de erro da API, o `onError` faz **rollback** do cache para o snapshot anterior e dispara um toast de erro.
-- **Skeleton loaders** durante o primeiro fetch (tabela e células de produto).
-- **Toasts (sonner)** explicitando o evento publicado: `demanda_criada`, `demanda_cancelada`, `wishlist_item_adicionado`, `wishlist_convertida_em_demanda`.
-- **Botão de refresh manual** com ícone animado (spin) + toast de confirmação enquanto o refetch acontece.
-- **Indicador de polling** no rodapé da tabela de demandas.
+O cache da API no TanStack Query é balanceado pela propriedade `staleTime`. Atualmente, não ocorre *polling infinito constante*, poupando performance na máquina e nos servidores, seguindo a diretriz:
+- `useDemandas`: Mantém os dados frescos e imutáveis por **4 segundos**.
+- `useWishlist`: Mantém os dados por **5 segundos**.
+- `useEnderecos`: Mantém os dados por **30 segundos** (endereços raramente mudam em tempo real).
 
----
-
-## 9. Fluxos Principais
-
-### 9.1. Criar Demanda
-
-1. Usuário clica em **"Nova demanda"** → `NovaDemandaDialog` abre.
-2. Formulário Zod com `superRefine`: campos de recorrência (`frequencia`, `data_inicio`, `dia_preferencial`) só são obrigatórios quando `is_recorrente === true`.
-3. Ao submeter, `useCreateDemanda` (hook) chama `criarDemanda` (service), que traduz `id_endereco_entrega → id_endereco_destino` antes de enviar ao backend. O envio dos IDs de usuário e empresa é feito automaticamente via JWT pelo interceptor em `api.ts`.
-4. **Optimistic UI**: a nova demanda aparece imediatamente na tabela. Ao confirmar da API, a query é invalidada e os dados reais substituem o otimismo.
-5. `onSuccess` do `mutate` fecha o dialog e reseta o formulário.
-
-### 9.2. Cancelar Demanda
-
-Ação inline na linha da tabela. Usa `PATCH /api/demandas/{id}/cancelar` com optimistic update — a linha é atualizada imediatamente; rollback automático se a API falhar.
-
-### 9.3. Visualizar Demanda
-
-O ícone de olho (`Eye`) abre `VisualizarDemandaDialog`, que busca o endereço correspondente na lista já cacheada via `useEnderecos` — sem requisição adicional.
-
-### 9.4. Promover Demanda a Pedido (Formalizar)
-Ação de formalização. Usa `PATCH /api/demandas/{id}/promover` (via hook acionando `formalizarDemanda` no service) para converter uma intenção de compra validada em um pedido definitivo (`is_pedido=true`), o qual disparará eventos Kafka pelo lado do backend.
-
-### 9.5. Buscar Demandas
-
-O campo de busca filtra **ao mesmo tempo** por ID da demanda e por nome/código do produto (usando os dados já cacheados de `useProdutos`). Filtragem é feita com `useMemo` no cliente — sem round-trip ao servidor.
-
-### 9.6. Wishlist → Demanda
-
-1. Usuário clica em **"Converter"** na linha da wishlist.
-2. Dialog solicita o endereço de entrega.
-3. `useConvertWishlist` chama `POST /api/demandas/wishlist/{id}/converter` com `{ id_endereco_destino, quantidade_desejada, prioridade }`.
-4. Ao converter, a query de wishlist e de demandas são invalidadas simultaneamente.
-
-### 9.7. CRUD de Endereços
-
-- **Criar:** `EnderecoDialog` sem prop `endereco` — formulário em branco.
-- **Editar:** `EnderecoDialog` com prop `endereco` — formulário pré-preenchido via `useEffect` ao abrir.
-- **Excluir:** Botão de lixeira com confirmação inline. Usa soft delete no backend (`ativo = false`).
-
----
-
-## 10. Design System
-
-- Paleta **Midnight Green + Orange CTA**, definida como padrão entre os times.
-- Tokens definidos em `src/styles.css` em formato HSL: `--primary`, `--secondary`, `--accent`, `--muted`, `--shadow-card`, `--shadow-elevated`, etc.
-- **Componentes não usam cores literais** (`bg-white`, `text-black`) — apenas tokens semânticos (`bg-card`, `text-primary`, `border-border`).
-- **Dark mode** via toggle no header (classe `.dark` no `<html>`).
-
----
-
-## 11. Como Rodar
-
-```bash
-# Instalar dependências
-npm install
-
-# Rodar em modo de desenvolvimento
-npm run dev
-```
-
-A aplicação sobe em `http://localhost:3000` e conecta ao backend em `http://localhost:8080`. A página principal está em `src/routes/index.tsx` e organiza o módulo em três abas: **Demandas**, **Wishlist** e **Endereços**.
-
-> **Pré-requisito:** O backend Python (`backend/main.py`) deve estar rodando na porta `8080` para que as chamadas de API funcionem.
-
----
-
-## 12. Substituindo os Mocks de Autenticação
-
-Atualmente, os services injetam IDs fixos de usuário e empresa:
-
-```ts
-// demandaService.ts
-const MOCK_USUARIO_ID = "u-1";
-const MOCK_EMPRESA_ID = "emp-1";
-```
-
-Quando a autenticação JWT for implementada, o passo a passo é:
-
-1. Em `auth.ts`, implemente `setToken(token)` após o login.
-2. Em cada service, substitua as constantes mock por:
-   ```ts
-   import { getToken } from "./auth";
-   // Decodifique o JWT para extrair id_usuario e id_empresa dos claims
-   ```
-3. O `api.ts` já injeta o header `Authorization: Bearer <token>` automaticamente — nenhuma mudança necessária no cliente HTTP.
-
----
-
-## 13. Próximos Passos
-
-- [ ] Substituir polling (`refetchInterval`) por WebSocket para eventos Kafka em tempo real.
-- [ ] Implementar autenticação JWT real e remover constantes mock dos services.
-- [ ] Adicionar tela de histórico de propostas por demanda (integração com Equipe 5).
-- [ ] Testes com Vitest + Testing Library nos hooks de optimistic UI.
-- [ ] Internacionalização (i18n) caso necessário.
+Para revalidações em tela, as listagens fornecem o botão **"Refresh"** (`<RefreshCw />`) que aciona nativamente a reobtenção (`refetch()`). Eventuais implementações de WebSocket poderão facilmente espetar as suas `subscriptions` chamando os métodos `queryClient.setQueryData` ou `queryClient.invalidateQueries` para plugar o tempo real exato sem necessitar refatorar o React.

@@ -1,353 +1,229 @@
 # Documentação Oficial da API - Módulo de Compradores (Equipe 4)
 
-Este documento detalha a arquitetura, endpoints, contratos de dados e integrações (Kafka) do Módulo de Compradores (Demandas e Intenções de Compra) do Portal B2B.
+Este documento detalha a arquitetura, endpoints, contratos de dados e integrações (Kafka) do Módulo de Compradores (Demandas, Wishlist e Pedidos) do Portal B2B. A documentação reflete o estado atual e exato da implementação tanto no backend (FastAPI) quanto no frontend (React).
 
 ---
 
-## 🏗️ Arquitetura e Fluxo de Dados
+## 🏗️ Arquitetura e Fluxos do Sistema
 
-O módulo foi desenhado com arquitetura de microsserviços. Ele expõe uma API REST para o Frontend (React) e consome eventos assíncronos via Apache Kafka para manter uma base de dados local atualizada com as informações de outros domínios (como o Catálogo de Produtos).
+O módulo expõe uma API REST para o Frontend e consome/publica eventos assíncronos via Apache Kafka. 
 
-### Fluxograma do Sistema
+### Fluxos Principais
 
-```mermaid
-graph TD
-    %% Atores
-    User((Usuário / Comprador))
-    
-    %% Frontend
-    subgraph Frontend [Frontend React / Vite]
-        UI[Interface de Usuário]
-        DemandaService[Demanda Service API]
-    end
+1. **Criação de Demanda:** 
+   O comprador informa produto, quantidade, prioridade e endereço. Pode ser definida como **recorrente** (diária, semanal, mensal), o que gera um registro de recorrência atrelado.
+   *Efeito:* Salva no banco e publica evento `demanda_criada` no Kafka.
 
-    %% Backend
-    subgraph Backend [Backend FastAPI - Módulo 4]
-        API_REST[API REST Controllers]
-        DB[(Banco de Dados Local\nSQLite/PostgreSQL)]
-        Consumer_Produtos[Consumer Produtos]
-        Consumer_Pedidos[Consumer Pedidos]
-    end
+2. **Fluxo de Wishlist:**
+   O comprador adiciona um produto à wishlist (intenção de compra) de forma simplificada, não sendo obrigatório informar endereço, quantidade e preço máximo.
+   A **conversão** da wishlist para demanda exige que os dados pendentes (endereço, quantidade, prioridade) sejam fornecidos, o que gera uma Demanda real e marca o item da wishlist como `convertido_em_demanda = true`.
 
-    %% Integrações Externas
-    subgraph Mensageria [Apache Kafka / Redpanda]
-        Topic_Produtos[(Tópico: sdi.produto.events)]
-        Topic_Pedidos[(Tópicos: pedido_criado, pedido_atualizado)]
-    end
-    
-    subgraph Modulo_Catalogo [Equipe 2 - Catálogo]
-        API_Catalogo[API Catálogo]
-    end
+3. **Fluxo de Demanda para Pedido (Promoção):**
+   Uma demanda "aberta" pode ser promovida para "pedido".
+   *Validação:* O `EstoqueService` consulta o banco `fornecimento_db` para garantir que há fornecedor apto a atender a quantidade desejada. Se sim, marca `is_pedido = true`. Se não, falha e a demanda continua aberta.
+   *Efeito:* Publica evento `pedido_criado` no Kafka com a indicação do `id_fornecedor_apto`.
 
-    subgraph Modulo_Pedidos [Equipe 7 - Pedidos]
-        API_Pedidos[API Pedidos]
-    end
+4. **Atualização de Status:**
+   As demandas possuem status: `aberta`, `em_negociacao`, `atendida`, `cancelada`. 
+   Se o status de um *pedido* for alterado, o sistema publica o evento `pedido_atualizado` no Kafka. Demandas simples (não promovidas) não emitem esse evento na mudança de status.
 
-    %% Conexões
-    User -->|Interage| UI
-    UI <-->|HTTP JSON| DemandaService
-    DemandaService <-->|REST API| API_REST
-    API_REST <-->|Leitura/Escrita| DB
-    
-    Modulo_Catalogo -->|Publica Eventos| Topic_Produtos
-    Topic_Produtos -->|Consome Eventos| Consumer_Produtos
-    Consumer_Produtos -->|Atualiza Cache Local| DB
-
-    Modulo_Pedidos -->|Publica Eventos| Topic_Pedidos
-    Topic_Pedidos -->|Consome Eventos| Consumer_Pedidos
-    Consumer_Pedidos -->|Atualiza Status Demanda| DB
-    
-    %% Estilos
-    classDef frontend fill:#61dafb,stroke:#333,stroke-width:2px,color:#000;
-    classDef backend fill:#059669,stroke:#333,stroke-width:2px,color:#fff;
-    classDef kafka fill:#e11d48,stroke:#333,stroke-width:2px,color:#fff;
-    classDef db fill:#f59e0b,stroke:#333,stroke-width:2px,color:#000;
-    
-    class UI,DemandaService frontend;
-    class API_REST,Consumer_Produtos,Consumer_Pedidos backend;
-    class Topic_Produtos,Topic_Pedidos kafka;
-    class DB db;
-```
-
-## 🛠️ Stack Tecnológica
-
-- **Backend:** Python 3.10+, FastAPI, SQLAlchemy, Pydantic v2
-- **Frontend:** React, Vite, TypeScript, TailwindCSS, TanStack Query
-- **Banco de Dados:** SQLite (Desenvolvimento) / PostgreSQL (Produção - Previsto)
-- **Mensageria:** Apache Kafka (via `confluent-kafka` e Redpanda)
-- **Agendamento (Jobs):** APScheduler (para demandas recorrentes)
+5. **Consistência Eventual (Produtos e Pedidos):**
+   Consumidores Kafka rodam em background (Threads) para espelhar produtos cadastrados na tabela `produto_cache` (usada como projeção no frontend para evitar dependência síncrona da Equipe 2) e atualizar o status de pedidos quando informados pela Equipe 7.
 
 ---
 
-## 🔗 Integração Kafka (Mensageria)
+## 🔐 Autenticação JWT
 
-O módulo atua tanto como **Consumidor** (para espelhar dados externos) quanto como **Produtor** (para notificar outras equipes sobre intenções de compra).
+**MUITO IMPORTANTE:** Todas as rotas protegidas exigem o envio do token no header `Authorization`.
 
-### 📥 Consumidor (Eventos Recebidos)
-
-O módulo escuta eventos para manter cache local e sincronizar o status das demandas.
-
-#### 1. Eventos de Produtos (Equipe 2 - Catálogo)
-Garante resiliência tendo um espelho dos produtos localmente.
-- **Tópico:** `sdi.produto.events`
-
-> ⚠️ **Divergência atual de implementação:** o `produto_consumer.py` está inscrito no tópico `produto_cadastrado`, não em `sdi.produto.events`. Combinar com a Equipe 2 e padronizar.
-
-- **Ação:** Cria/atualiza registros na tabela `produto_cache`.
-- **Payload Esperado:**
-```json
-{
-  "eventId": "uuid-do-evento",
-  "eventType": "ProdutoCriado", // ou ProdutoAtualizado
-  "timestamp": "2023-10-27T10:00:00Z",
-  "data": {
-    "id": "uuid-do-produto",
-    "codigo": "NOTE-001",
-    "nome": "Notebook XYZ",
-    "ativo": true
-  }
-}
-```
-
-#### 2. Eventos de Pedidos (Equipe 7 - Pedidos)
-**Atenção Equipe 7:** Adotamos a abordagem de *Consumer-Driven Contracts*. O módulo de compradores **exige** que os eventos de criação de pedido trafeguem a informação `id_demanda` correspondente na raiz do payload.
-- **Tópicos:** `pedido_criado`, `pedido_atualizado`
-- **Ação:** Busca a Demanda pelo ID fornecido e atualiza o seu `status` para `atendida`.
-- **Payload Esperado (Obrigatório):**
-```json
-{
-  "eventId": "uuid-do-evento",
-  "eventType": "pedido_criado",
-  "correlationId": "uuid-correlacao",
-  "payload": {
-    "id_demanda": "uuid-da-demanda",
-    "id_pedido": "uuid-do-pedido",
-    "status": "processando"
-  }
-}
-```
-
-### 📤 Produtor (Eventos Publicados)
-
-O módulo notifica o ecossistema sempre que uma nova demanda de compra surge (seja manualmente ou via agendamento). A chave (Key) da mensagem no Kafka é sempre o `id_demanda`.
-
-#### Evento: Demanda Criada Manualmente
-- **Tópico:** `demanda_criada`
-- **Gatilho:** Quando o comprador cria uma demanda pelo Frontend ou converte um item da Wishlist.
-- **Envelope do Evento:**
-```json
-{
-  "eventId": "uuid-do-evento",
-  "eventType": "demanda_criada",
-  "eventVersion": "1.0",
-  "timestamp": "2023-10-27T10:00:00Z",
-  "source": "modulo-compradores",
-  "correlationId": "uuid-da-demanda",
-  "payload": {
-    "id_empresa_comprador": "uuid-da-empresa",
-    "id_produto": "uuid-do-produto",
-    "quantidade_desejada": 10.0,
-    "preco_maximo": 1500.00,
-    "tipo_demanda": false,
-    "prioridade": "media"
-  }
-}
-```
-
-#### Evento: Demanda Recorrente Gerada (Job)
-- **Tópico:** `demanda_recorrente_gerada`
-- **Gatilho:** Quando o *APScheduler* roda em background e cria automaticamente uma demanda baseada em uma assinatura/recorrência.
-- **Envelope do Evento:** Formato idêntico ao `demanda_criada`, mudando apenas o `eventType` para `demanda_recorrente_gerada`.
+- **Formato:** `Authorization: Bearer <seu_token_jwt>`
+- **Comportamento Esperado:** 
+  - O acesso sem token, com token expirado ou inválido resulta em HTTP `401 Unauthorized`.
+  - O token deve obrigatoriamente conter as claims `sub` (ID do usuário) e `empresa_id` (ID da empresa compradora). Falta destas claims também retorna `401`.
+- **Padrão no Frontend:** A camada HTTP base (`services/api.ts`) injeta automaticamente o cabeçalho `Authorization` recuperado pelo `auth.ts` em toda requisição, exceto quando marcada como anônima. Requisições que retornam `401` provocam a limpeza automática do token, forçando novo login. Os IDs não devem ser passados nos payloads, pois o backend os extrai diretamente do JWT (`get_current_usuario_id`, `get_current_empresa_id`).
 
 ---
 
-## 🌐 Referência da API REST
+## 🌐 Endpoints da API REST
 
-URL Base: `http://localhost:5004` (ou roteado via API Gateway em `/api/`)
+A API do backend mapeia as rotas diretamente na raiz. Através do Gateway ou Proxy (como o vite proxy do frontend), elas costumam ser chamadas com o prefixo `/api/demandas`.
 
-### 🔐 Autenticação
+### 1. Demandas e Pedidos
 
-Todos os endpoints (exceto `/ping`) exigem o header `Authorization: Bearer <jwt>`. O JWT deve conter as claims:
+Gerencia o ciclo de vida das intenções de compra e pedidos.
 
-- `sub`: id do usuário
-- `empresa_id`: id da empresa do comprador
-- `aud`: `portal-b2b`
-- `iss`: `portal-autenticacao`
-
-O `id_empresa` e `id_usuario` são extraídos do token — **não devem mais ser enviados em body, query ou path**.
-
-> **Dica para Desenvolvimento Local:** Utilize o script `backend/gerar_token_teste.py` para gerar um JWT com validade de 24 horas. Esse token pode ser utilizado para testar os endpoints diretamente pelo Swagger UI (`http://127.0.0.1:5004/docs`).
-
-### 1. Demandas
-
-Gerencia o ciclo de vida das intenções de compra.
-
-#### `GET /demandas`
-Lista as demandas da empresa autenticada.
-- **Query Params:** `is_pedido` (Opcional, bool) — filtra entre demandas e pedidos.
-- **Exemplos:**
-  - `GET /demandas` → todas as demandas da empresa
-  - `GET /demandas?is_pedido=true` → só os pedidos
-  - `GET /demandas?is_pedido=false` → só as demandas que ainda não viraram pedido
-- **Response (200 OK):** Array de objetos Demanda.
-
-#### `POST /demandas`
+#### `POST /`
 Cria uma nova demanda.
 - **Body:**
   ```json
   {
-    "id_produto": "uuid-produto",
-    "id_endereco_destino": "uuid-endereco",
-    "quantidade_desejada": 10,
+    "id_produto": "uuid-do-produto",
+    "id_endereco_destino": "uuid-do-endereco", // Frontend pode enviar "id_endereco_entrega", mas o serviço mapeia
+    "quantidade_desejada": 10.5,
     "preco_maximo": 1500.00, // Opcional
-    "prioridade": "media",   // alta, media, baixa
-    "is_recorrente": true,
-    "recorrencia": {         // Obrigatório se is_recorrente=true
+    "prioridade": "media",   // "baixa", "media" ou "alta"
+    "observacao": "Detalhes...", // Opcional
+    "is_recorrente": false,
+    "recorrencia": {         // Obrigatório se is_recorrente = true
       "frequencia": "semanal",
+      "quantidade_por_periodo": 10.5,
       "data_inicio": "2024-01-01",
-      "dia_preferencial": 2
+      "data_fim": "2024-12-31", // Opcional
+      "dia_preferencial": "segunda-feira"
     }
   }
   ```
-- **Response (201 Created):** Objeto Demanda criado.
+- **Response (201 Created):** Retorna o `DemandaResponseDTO`.
 
-#### `PATCH /demandas/{id_demanda}/status`
-Atualiza o status de uma demanda.
-- **Body:** `{ "status": "em_negociacao" }`
-- **Response (200 OK):** Objeto Demanda atualizado.
-- **Efeitos colaterais Kafka:** se a demanda for um pedido (`is_pedido=true`), publica `pedido_atualizado` no tópico `pedido_atualizado` com o novo status no payload. Se ainda for demanda comum (`is_pedido=false`), não publica nada (a doc oficial do professor não tem evento `demanda_atualizada`).
+#### `GET /`
+Lista todas as demandas da empresa autenticada.
+- **Query Params:** `is_pedido` (Opcional, boolean) – Filtra se busca apenas demandas (`false`) ou apenas pedidos (`true`).
+- **Response (200 OK):** Retorna um array de `DemandaResponseDTO`.
 
-#### `PATCH /demandas/{id_demanda}/cancelar`
-Cancela uma demanda (Soft Delete / Mudança de Status).
-- **Response (200 OK):** Objeto Demanda cancelado.
+#### `PATCH /{id_demanda}/status`
+Atualiza o status de uma demanda ou pedido existente.
+- **Body:**
+  ```json
+  {
+    "status": "em_negociacao" // "aberta", "em_negociacao", "atendida", "cancelada"
+  }
+  ```
+- **Response (200 OK):** Retorna o `DemandaResponseDTO` atualizado.
+- **Nota:** Se `is_pedido` for `true`, dispara o evento `pedido_atualizado` no Kafka.
 
-#### `PATCH /demandas/{id_demanda}/promover`
-Promove uma demanda para pedido (marca `is_pedido=true`). **Idempotente:** se a demanda já for pedido, retorna o estado atual sem alteração.
-- **Erros:**
-  - `400 Bad Request` — `"Demanda não encontrada"` (id não existe na empresa do token).
-  - `400 Bad Request` — `"Não é possível promover demanda cancelada para pedido"`.
-- **Response (200 OK):** Objeto Demanda atualizado com `is_pedido: true`.
-- **Efeitos colaterais Kafka:** publica `pedido_criado` no tópico `pedido_criado` com envelope padrão do professor e `source=modulo-compradores`. A 2ª chamada não dispara evento (idempotência cai antes do producer). Nosso próprio `pedido_consumer` ignora eventos com `source=modulo-compradores` (anti-loop).
+#### `PATCH /{id_demanda}/cancelar`
+Cancela uma demanda (atualiza o status para `cancelada`).
+- **Response (200 OK):** Retorna o `DemandaResponseDTO` atualizado.
+
+#### `PATCH /{id_demanda}/promover`
+Promove uma demanda aberta a pedido. O serviço checa disponibilidade no banco de estoque `fornecimento_db`.
+- **Validações e Erros:** 
+  - `400 Bad Request` ou `422 Unprocessable Entity`: Demanda não encontrada, ou cancelada, ou nenhum fornecedor com estoque apto.
+  - `503 Service Unavailable`: Falha de conexão com serviço de estoque.
+- **Response (200 OK):** Retorna o `DemandaResponseDTO` com `is_pedido = true`.
+- **Nota:** Dispara evento `pedido_criado` se houver fornecedor apto.
 
 ---
 
 ### 2. Endereços de Entrega
 
-Cadastro de endereços locais do comprador para entregas das demandas.
+Gerencia os locais de recebimento de mercadorias.
 
-#### `GET /demandas/enderecos`
-Lista os endereços ativos da empresa.
-- **Query Params:** `id_empresa` (Opcional)
-- **Response (200 OK):** Array de Endereços.
-
-#### `POST /demandas/enderecos` (Alias: `POST /enderecos`)
+#### `POST /enderecos`
 Cadastra um novo endereço de entrega.
 - **Body:**
   ```json
   {
     "apelido": "Sede Principal", // Opcional
     "logradouro": "Avenida Paulista",
-    "numero": "1000",
-    "complemento": "Andar 5",
-    "bairro": "Bela Vista",
+    "numero": "1000",            // Opcional
+    "complemento": "Andar 5",    // Opcional
+    "bairro": "Bela Vista",      // Opcional
     "cidade": "São Paulo",
-    "uf": "SP", // Aceita 'uf' ou 'estado'
-    "cep": "01310-100"
+    "uf": "SP",                  // ou "estado"
+    "cep": "01310-100",
+    "latitude": -23.561,         // Opcional
+    "longitude": -46.656         // Opcional
   }
   ```
-- **Response (201 Created):** Objeto Endereço criado.
+- **Response (201 Created):** Retorna o `EnderecoResponseDTO`.
+
+#### `GET /enderecos`
+Lista todos os endereços ativos da empresa.
+- **Response (200 OK):** Array de `EnderecoResponseDTO`.
 
 #### `PUT /enderecos/{id_endereco}`
-Atualiza um endereço de entrega existente. Mesmo schema do `POST /enderecos`.
-- **Body:** Igual ao body do `POST /enderecos`.
-- **Response (200 OK):** Objeto Endereço atualizado.
-- **Response (404 Not Found):** Endereço não encontrado ou não pertence à empresa do token.
+Atualiza os dados de um endereço.
+- **Body:** Mesmo schema da criação.
+- **Response (200 OK):** Retorna o endereço atualizado.
+- **Erro:** `404 Not Found` caso o endereço não exista ou não pertença à empresa.
 
 #### `DELETE /enderecos/{id_endereco}`
-Desativa um endereço (Soft Delete).
-- **Response (204 No Content)**
+Deleta logicamente (soft delete) o endereço.
+- **Response (204 No Content).**
+- **Erro:** `404 Not Found` caso o endereço não seja da empresa.
 
 ---
 
 ### 3. Wishlist (Lista de Desejos)
 
-Itens que o comprador deseja, mas ainda não formalizou como demanda.
+Armazena intenções preliminares de compra.
 
-#### `GET /demandas/wishlist`
-Lista itens na wishlist.
-- **Response (200 OK):** Array de Itens da Wishlist.
-
-#### `POST /demandas/wishlist`
+#### `POST /wishlist`
 Adiciona um item à wishlist.
-- **Body:** Payload similar à criação de demanda, sem endereço.
-
-#### `POST /demandas/wishlist/{id_item}/converter`
-Converte um item da wishlist em uma demanda real.
 - **Body:**
   ```json
   {
-    "id_endereco_entrega": "uuid-endereco"
+    "id_produto": "uuid-do-produto",
+    "quantidade_desejada": 5, // Opcional
+    "preco_maximo": 1200.0,   // Opcional
+    "prioridade": "baixa",    // Opcional
+    "observacao": "Apenas cotando" // Opcional
   }
   ```
-- **Response (201 Created):** Objeto Demanda recém-criado.
+- **Response (201 Created):** Retorna o `WishlistResponseDTO`.
+
+#### `GET /wishlist`
+Lista itens pendentes da wishlist da empresa.
+- **Response (200 OK):** Array de `WishlistResponseDTO`.
+
+#### `POST /wishlist/{id_item}/converter`
+Converte um item de wishlist numa Demanda real, exigindo os dados faltantes.
+- **Body:**
+  ```json
+  {
+    "id_endereco_destino": "uuid-endereco", // Frontend pode enviar "id_endereco_entrega"
+    "quantidade_desejada": 10,
+    "prioridade": "media"
+  }
+  ```
+- **Response (200 OK):** Retorna o modelo recém-gerado `DemandaResponseDTO`. (Nota: status devolve um modelo de demanda, não de wishlist).
 
 ---
 
 ### 4. Cache de Produtos (Projeção)
 
-Endpoints de consulta de leitura (Read-Model) dos dados cacheados via Kafka.
+Endpoints exclusivos de leitura (`Read-Model`) mantidos pelo consumer Kafka, utilizados pelo frontend (ex: listagens, exibição de nome/código sem depender da Equipe 2 síncrona).
 
-#### `GET /demandas/produtos/projecao/{id_produto}`
-Busca os detalhes básicos de um produto pelo ID. Usado pelo Frontend para exibir o nome do produto nas listagens de demandas sem precisar chamar a API do Catálogo (Equipe 2).
-- **Response (200 OK):**
-  ```json
-  {
-    "id": "uuid-produto",
-    "codigo": "NOTE-001",
-    "nome": "Notebook XYZ",
-    "categoria": "N/D",
-    "unidade": "UN",
-    "sincronizado_em": "2023-10-27T10:05:00Z"
-  }
-  ```
-- **Response (404 Not Found):** Se o Kafka ainda não tiver consumido o evento deste produto.
+#### `GET /produtos/projecao`
+Retorna todos os produtos presentes no cache local.
+- **Response (200 OK):** Array de `ProdutoProjecaoDTO`.
+
+#### `GET /produtos/projecao/{id_produto}`
+Busca detalhes de um produto específico.
+- **Response (200 OK):** Retorna um objeto `ProdutoProjecaoDTO` contendo `id`, `codigo`, `nome`, `categoria`, `unidade`, `sincronizado_em`.
+- **Erros:**
+  - `400 Bad Request` se receber a string literal `"null"`.
+  - `404 Not Found` se o produto não constar no cache local.
 
 ---
 
-## 🛠️ Como Integrar (Frontend)
+## 🔗 Integração Kafka (Mensageria)
 
-O Frontend (React/Vite) já possui o proxy configurado em `vite.config.ts`:
+O módulo utiliza Kafka para a comunicação assíncrona entre domínios.
 
-```typescript
-// vite.config.ts
-proxy: {
-  "/api": {
-    target: "http://127.0.0.1:5004", // Porta do Backend FastAPI
-    rewrite: (path) => path.replace(/^\/api/, ""),
-  },
-}
-```
+### 📥 Eventos Consumidos (Background Jobs)
 
-O Frontend chama a API utilizando a instância configurada do Axios ou Fetch nativo, lidando com os DTOs diretamente.
+As rotinas de consumidor rodam em threads assíncronas no contexto do FastAPI (iniciadas no `lifespan`).
+- **Consumer de Produtos (`produto_consumer`):** Escuta tópico de produtos e reflete os dados (nome, código) na tabela `produto_cache`. Apenas consome eventos sem impactar as demandas já criadas.
+- **Consumer de Pedidos (`pedido_consumer`):** Escuta criação/atualização de pedidos (da Equipe 7) para atualizar o status da demanda associada no banco de compradores.
 
-Exemplo de chamada com TanStack Query:
-```typescript
-import { api } from "./api";
+### 📤 Eventos Produzidos
 
-export async function listarDemandas(): Promise<Demanda[]> {
-  return await api.get<Demanda[]>("/api/demandas");
-}
-```
+Os produtores publicam eventos para notificar o ecossistema B2B:
 
-## 🧪 Dados de Teste (Seed)
-Para popular o banco local com dados de teste para visualização no frontend, utilize o script de seed:
+1. **`demanda_criada`:** Disparado ao criar uma demanda manual, converter wishlist ou via job de demandas recorrentes (`DemandaProducer.publicar_demanda_criada`). Payload inclui quantidade, preço máximo, tipo e prioridade.
+2. **`pedido_criado`:** Disparado pelo processo de promoção. Payload informa a efetivação da demanda em pedido contendo o `id_fornecedor_apto` checado em banco.
+3. **`pedido_atualizado`:** Disparado sempre que o status de uma demanda já promovida (`is_pedido=true`) muda de estado.
 
-1. Pare a execução do servidor Uvicorn/FastAPI.
-2. Execute o script ativando o ambiente virtual:
-   ```bash
-   .\venv\Scripts\python.exe seed.py
-   ```
-3. Reinicie o servidor:
-   ```bash
-   python main.py
-   ```
+---
+
+## 🖥️ Integração e Modelos no Frontend
+
+O frontend gerencia estados globais e interações por meio de hooks (`TanStack Query`) e chamadas através dos Services no diretório `src/services`.
+
+- A classe/objeto `api.ts` serve como proxy para as chamadas e injeta automaticamente o Bearer Token.
+- Requisições não-sucesso retornam um `ApiError` formatado.
+- Os mapeamentos de nomes de propriedades DTO, como `id_endereco_entrega` (front) para `id_endereco_destino` (back), são realizados dinamicamente nos Services, garantindo transparência para os componentes React.
+- Telas/Tabs segmentam visualmente as Demandas das Wishlists e as Demandas normais dos Pedidos Efetivados, aproveitando a flag `is_pedido`.
+- O frontend é tolerante a falhas na projeção de produtos: se o ID do produto da demanda não existir no cache local (`/produtos/projecao`), ele trata a falha graciosamente.
