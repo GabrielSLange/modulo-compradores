@@ -144,9 +144,12 @@ O módulo notifica o ecossistema sempre que uma nova demanda de compra surge (se
   "source": "modulo-compradores",
   "correlationId": "uuid-da-demanda",
   "payload": {
-    "id_demanda": "uuid-da-demanda",
+    "id_empresa_comprador": "uuid-da-empresa",
     "id_produto": "uuid-do-produto",
-    "quantidade_desejada": 10
+    "quantidade_desejada": 10.0,
+    "preco_maximo": 1500.00,
+    "tipo_demanda": false,
+    "prioridade": "media"
   }
 }
 ```
@@ -173,6 +176,8 @@ Todos os endpoints (exceto `/ping`) exigem o header `Authorization: Bearer <jwt>
 
 O `id_empresa` e `id_usuario` são extraídos do token — **não devem mais ser enviados em body, query ou path**.
 
+> **Dica para Desenvolvimento Local:** Utilize o script `backend/gerar_token_teste.py` para gerar um JWT com validade de 24 horas. Esse token pode ser utilizado para testar os endpoints diretamente pelo Swagger UI (`http://127.0.0.1:5004/docs`).
+
 ### 1. Demandas
 
 Gerencia o ciclo de vida das intenções de compra.
@@ -196,7 +201,12 @@ Cria uma nova demanda.
     "quantidade_desejada": 10,
     "preco_maximo": 1500.00, // Opcional
     "prioridade": "media",   // alta, media, baixa
-    "is_recorrente": false
+    "is_recorrente": true,
+    "recorrencia": {         // Obrigatório se is_recorrente=true
+      "frequencia": "semanal",
+      "data_inicio": "2024-01-01",
+      "dia_preferencial": 2
+    }
   }
   ```
 - **Response (201 Created):** Objeto Demanda criado.

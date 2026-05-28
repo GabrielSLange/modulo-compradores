@@ -119,7 +119,7 @@ await api.delete(`/api/demandas/enderecos/${id}`);
 
 Abstrai o acesso ao `localStorage` para o token JWT. Funções: `getToken()`, `setToken(t)`, `clearToken()`.
 
-> **Atenção:** Enquanto a autenticação real não é implementada, os services injetam IDs mock diretamente (`MOCK_USUARIO_ID = "u-1"`, `MOCK_EMPRESA_ID = "emp-1"`). Quando o JWT for implementado, basta substituir por `getToken()` e decodificar os claims.
+> **Nota:** A autenticação é baseada em JWT. O backend extrai `id_usuario` (sub) e `id_empresa` diretamente do token. A camada de serviços no frontend não precisa mais enviar esses IDs no corpo da requisição, o `api.ts` cuida de injetar o cabeçalho `Authorization: Bearer <token>`. Para testes locais, pode-se gerar um token com o script `backend/gerar_token_teste.py` e salvar no localStorage.
 
 ### 4.3. Services de Domínio
 
@@ -127,7 +127,7 @@ Cada arquivo de service encapsula as chamadas HTTP de um domínio e **traduz nom
 
 | Arquivo | Rota base | Operações |
 |---|---|---|
-| `demandaService.ts` | `/api/demandas` | listar, criar, cancelar, atualizar status |
+| `demandaService.ts` | `/api/demandas` | listar, criar, cancelar, atualizar status, formalizar (promover a pedido) |
 | `enderecoService.ts` | `/api/demandas/enderecos` | listar, criar, atualizar, excluir (soft delete) |
 | `produtoService.ts` | `/api/demandas/produtos` | listar projeções locais |
 | `wishlistService.ts` | `/api/demandas/wishlist` | listar, adicionar, converter em demanda |
@@ -229,7 +229,7 @@ Props:
 
 1. Usuário clica em **"Nova demanda"** → `NovaDemandaDialog` abre.
 2. Formulário Zod com `superRefine`: campos de recorrência (`frequencia`, `data_inicio`, `dia_preferencial`) só são obrigatórios quando `is_recorrente === true`.
-3. Ao submeter, `useCreateDemanda` (hook) chama `criarDemanda` (service), que injeta os IDs mock e traduz `id_endereco_entrega → id_endereco_destino` antes de enviar ao backend.
+3. Ao submeter, `useCreateDemanda` (hook) chama `criarDemanda` (service), que traduz `id_endereco_entrega → id_endereco_destino` antes de enviar ao backend. O envio dos IDs de usuário e empresa é feito automaticamente via JWT pelo interceptor em `api.ts`.
 4. **Optimistic UI**: a nova demanda aparece imediatamente na tabela. Ao confirmar da API, a query é invalidada e os dados reais substituem o otimismo.
 5. `onSuccess` do `mutate` fecha o dialog e reseta o formulário.
 
@@ -241,18 +241,21 @@ Ação inline na linha da tabela. Usa `PATCH /api/demandas/{id}/cancelar` com op
 
 O ícone de olho (`Eye`) abre `VisualizarDemandaDialog`, que busca o endereço correspondente na lista já cacheada via `useEnderecos` — sem requisição adicional.
 
-### 9.4. Buscar Demandas
+### 9.4. Promover Demanda a Pedido (Formalizar)
+Ação de formalização. Usa `PATCH /api/demandas/{id}/promover` (via hook acionando `formalizarDemanda` no service) para converter uma intenção de compra validada em um pedido definitivo (`is_pedido=true`), o qual disparará eventos Kafka pelo lado do backend.
+
+### 9.5. Buscar Demandas
 
 O campo de busca filtra **ao mesmo tempo** por ID da demanda e por nome/código do produto (usando os dados já cacheados de `useProdutos`). Filtragem é feita com `useMemo` no cliente — sem round-trip ao servidor.
 
-### 9.5. Wishlist → Demanda
+### 9.6. Wishlist → Demanda
 
 1. Usuário clica em **"Converter"** na linha da wishlist.
 2. Dialog solicita o endereço de entrega.
 3. `useConvertWishlist` chama `POST /api/demandas/wishlist/{id}/converter` com `{ id_endereco_destino, quantidade_desejada, prioridade }`.
 4. Ao converter, a query de wishlist e de demandas são invalidadas simultaneamente.
 
-### 9.6. CRUD de Endereços
+### 9.7. CRUD de Endereços
 
 - **Criar:** `EnderecoDialog` sem prop `endereco` — formulário em branco.
 - **Editar:** `EnderecoDialog` com prop `endereco` — formulário pré-preenchido via `useEffect` ao abrir.
