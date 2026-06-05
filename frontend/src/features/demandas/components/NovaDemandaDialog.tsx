@@ -56,11 +56,7 @@ const schema = z
 
 type FormValues = z.infer<typeof schema>;
 
-interface NovaDemandaDialogProps {
-  isPedido?: boolean;
-}
-
-export function NovaDemandaDialog({ isPedido = false }: NovaDemandaDialogProps) {
+export function NovaDemandaDialog() {
   const [open, setOpen] = useState(false);
   const { data: enderecos, isLoading: isLoadingEnderecos, isError: isErrorEnderecos } = useEnderecos();
   const { data: produtos, isLoading: isLoadingProdutos, isError: isErrorProdutos } = useProdutos(); // Usa useProdutos
@@ -85,7 +81,7 @@ export function NovaDemandaDialog({ isPedido = false }: NovaDemandaDialogProps) 
       observacao: v.observacao,
       is_recorrente: v.is_recorrente,
     };
-    payload.is_pedido = isPedido;
+    payload.is_pedido = false;
 
     if (v.is_recorrente) {
       payload.recorrencia = {
@@ -109,16 +105,14 @@ export function NovaDemandaDialog({ isPedido = false }: NovaDemandaDialogProps) 
     <Dialog open={open} onOpenChange={(o) => { if (!o) { form.reset(RESET_VALUES); } setOpen(o); }}>
       <DialogTrigger asChild>
         <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
-          <Plus className="size-4" /> {isPedido ? "Novo pedido" : "Nova demanda"}
+          <Plus className="size-4" /> Nova demanda
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isPedido ? "Novo pedido" : "Nova demanda"}</DialogTitle>
+          <DialogTitle>Nova demanda</DialogTitle>
           <DialogDescription>
-            {isPedido
-              ? "Cadastre um pedido de compra."
-              : "Cadastre uma intenção de compra. Marque \"recorrente\" para automatizar a geração periódica."}
+            Cadastre uma intenção de compra. Marque "recorrente" para automatizar a geração periódica.
           </DialogDescription>
         </DialogHeader>
 
@@ -232,7 +226,7 @@ export function NovaDemandaDialog({ isPedido = false }: NovaDemandaDialogProps) 
           <DialogFooter className="col-span-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
             <Button type="submit" disabled={create.isPending} className="bg-secondary text-secondary-foreground hover:bg-secondary/90">
-              {create.isPending ? "Publicando..." : isPedido ? "Criar pedido" : "Criar demanda"}
+              {create.isPending ? "Publicando..." : "Criar demanda"}
             </Button>
           </DialogFooter>
         </form>

@@ -29,6 +29,16 @@ export async function atualizarStatus(id: string, status: DemandaStatus): Promis
   return await api.patch<Demanda>(`/api/demandas/${id}/status`, { status });
 }
 
-export async function formalizarDemanda(id: string): Promise<Demanda> {
-  return await api.patch<Demanda>(`/api/demandas/${id}/promover`);
+
+
+// 1. Busca as cotações de frete retornadas pelo serviço de logística
+export async function listarCotacoes(id_demanda: string): Promise<any[]> {
+  return await api.get<any[]>(`/api/demandas/${id_demanda}/cotacoes`);
+}
+
+// 2. Envia a cotação escolhida para contratação
+export async function contratarFrete(id_demanda: string, cotacao_id: string): Promise<Demanda> {
+  return await api.post<Demanda>(`/api/demandas/${id_demanda}/contratar-frete`, {
+    cotacao_id,
+  });
 }

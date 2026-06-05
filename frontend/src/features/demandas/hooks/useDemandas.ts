@@ -5,7 +5,9 @@ import {
   criarDemanda,
   cancelarDemanda,
   atualizarStatus,
-  formalizarDemanda,
+
+  listarCotacoes,
+  contratarFrete,
   type CriarDemandaPayload,
 } from "@/services/demandaService";
 import type { Demanda, DemandaStatus } from "@/features/types";
@@ -24,13 +26,8 @@ export function useDemandas() {
 export function useCreateDemanda() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: CriarDemandaPayload & { is_pedido?: boolean }) => {
-      const { is_pedido, ...rest } = payload;
-      const demanda = await criarDemanda(rest);
-      if (is_pedido) {
-        return await formalizarDemanda(demanda.id);
-      }
-      return demanda;
+    mutationFn: async (payload: CriarDemandaPayload) => {
+      return await criarDemanda(payload);
     },
     // Optimistic UI: insere a demanda imediatamente; rollback se a API falhar.
     onMutate: async (payload) => {
@@ -42,7 +39,7 @@ export function useCreateDemanda() {
         id_empresa_comprador: "emp-1",
         id: "tmp-" + Math.random().toString(36).slice(2, 8),
         status: "aberta",
-        is_pedido: payload.is_pedido || false,
+        is_pedido: false,
         data_criacao: new Date().toISOString(),
         atualizado_em: new Date().toISOString(),
       };
@@ -89,32 +86,30 @@ export function useUpdateStatus() {
   });
 }
 
-export function useFormalizarPedido() {
+export function useCotacoes(id_demanda: string, enabled = true) {
+  return useQuery({
+    queryKey: ["cotacoes", id_demanda],
+    queryFn: () => listarCotacoes(id_demanda),
+    enabled: !!id_demanda && enabled,
+    staleTime: 1000 * 60 * 5, // 5 minutos
+  });
+}
+
+export function useContratarFrete() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => formalizarDemanda(id),
-    onMutate: async (id) => {
-      await qc.cancelQueries({ queryKey: KEY });
-      const prev = qc.getQueryData<Demanda[]>(KEY) ?? [];
-      qc.setQueryData<Demanda[]>(
-        KEY,
-        prev.map((d) => (d.id === id ? { ...d, is_pedido: true } : d)),
-      );
-      return { prev };
+    mutationFn: ({ id_demanda, cotacao_id }: { id_demanda: string; cotacao_id: string }) =>
+      contratarFrete(id_demanda, cotacao_id),
+    onSuccess: (data, variables) => {
+      toast.success("Frete contratado com sucesso!");
+      qc.setQueryData<Demanda[]>(KEY, (old) => {
+        if (!old) return old;
+        return old.map((d) => (d.id === variables.id_demanda ? data : d));
+      });
+      qc.invalidateQueries({ queryKey: KEY });
     },
-    onError: (err, _v, ctx) => {
-      if (ctx?.prev) qc.setQueryData(KEY, ctx.prev);
-      if (err instanceof ApiError && err.status === 422) {
-        toast.error("Estoque insuficiente", {
-          description: "Não foi possível converter esta demanda em pedido pois nenhum fornecedor possui estoque suficiente no momento. A demanda permanece aberta.",
-        });
-      } else {
-        toast.error("Falha ao formalizar pedido", { description: (err as Error).message });
-      }
+    onError: (err) => {
+      toast.error("Erro ao contratar frete", { description: (err as Error).message });
     },
-    onSuccess: () => {
-      toast.success("Pedido formalizado com sucesso");
-    },
-    onSettled: () => qc.invalidateQueries({ queryKey: KEY }),
   });
 }

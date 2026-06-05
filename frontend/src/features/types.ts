@@ -43,6 +43,20 @@ export interface Demanda {
   is_pedido: boolean;
   data_criacao: string;
   atualizado_em: string;
+
+  // Novos campos de Negociação e Logística
+  tipo_transporte?: string;
+  peso_carga?: number;
+  cep_origem?: string;
+  cep_destino?: string;
+  id_fornecedor?: string;
+  preco_final?: number;
+  valor_total?: number;
+
+  // Campos de contratação de frete
+  id_frete_selecionado?: string;
+  valor_frete?: number;
+  status_frete?: string;
 }
 
 export interface WishlistItem {

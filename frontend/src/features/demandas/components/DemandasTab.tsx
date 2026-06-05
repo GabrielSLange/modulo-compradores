@@ -11,14 +11,14 @@ import {
 } from "@/components/ui/select";
 
 import { toast } from "sonner";
-import { useDemandas, useUpdateStatus, useFormalizarPedido } from "../hooks/useDemandas";
+import { useDemandas, useUpdateStatus } from "../hooks/useDemandas";
 import { useProdutos } from "@/features/produtos/hooks/useProduto";
 import { ProdutoCell } from "@/features/produtos/components/ProdutoCell";
 import { StatusBadge } from "./StatusBadge";
 import { NovaDemandaDialog } from "./NovaDemandaDialog";
 import { VisualizarDemandaDialog } from "./VisualizarDemandaDialog";
 import type { DemandaStatus } from "@/features/types";
-import { FileCheck } from "lucide-react";
+
 
 interface DemandasTabProps {
   isPedido?: boolean;
@@ -28,7 +28,7 @@ export function DemandasTab({ isPedido = false }: DemandasTabProps) {
   const { data: demandas, isLoading, refetch, isFetching } = useDemandas();
   const { data: produtos } = useProdutos();
   const updateStatus = useUpdateStatus();
-  const formalizarPedido = useFormalizarPedido();
+
   const [busca, setBusca] = useState("");
   const [statusFilter, setStatusFilter] = useState<"todas" | DemandaStatus>("todas");
   const [pagina, setPagina] = useState(1);
@@ -70,7 +70,7 @@ export function DemandasTab({ isPedido = false }: DemandasTabProps) {
                 : "Intenções de compra."}
             </p>
           </div>
-          <NovaDemandaDialog isPedido={isPedido} />
+          {!isPedido && <NovaDemandaDialog />}
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
           <div className="relative flex-1">
@@ -147,17 +147,7 @@ export function DemandasTab({ isPedido = false }: DemandasTabProps) {
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
                         <VisualizarDemandaDialog demanda={d} />
-                        {!isPedido && d.status === "aberta" && (
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            title="Formalizar como Pedido"
-                            onClick={() => formalizarPedido.mutate(d.id)}
-                            className="text-primary hover:text-primary hover:bg-primary/10"
-                          >
-                            <FileCheck className="size-4" />
-                          </Button>
-                        )}
+
                         {d.status !== "cancelada" && d.status !== "atendida" && (
                           <Button
                             size="icon"
