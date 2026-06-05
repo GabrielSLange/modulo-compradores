@@ -8,7 +8,8 @@ from Data.fornecimento_database import FornecimentoSessionLocal
 from DTOs.Request.demanda_create_dto import DemandaCreateDTO
 from DTOs.Response.demanda_response_dto import DemandaResponseDTO
 from Services.demanda_service import DemandaService
-from Security.auth import get_current_empresa_id, get_current_usuario_id
+from Security.auth import get_current_empresa_id, get_current_usuario_id, security
+from fastapi.security import HTTPAuthorizationCredentials
 
 router = APIRouter()
 
@@ -105,3 +106,57 @@ def promover_demanda_para_pedido(
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao promover demanda para pedido: {str(e)}")
+
+
+@router.get("/{id_demanda}/cotacoes", response_model=list)
+def obter_cotacoes_frete(
+    id_demanda: str,
+    db: Session = Depends(get_db),
+    id_empresa: str = Depends(get_current_empresa_id),
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """
+    Proxy REST para listar as cotações de frete disponíveis para a demanda/pedido.
+    Propaga o JWT do usuário logado para a API de Logística.
+    """
+    from Models.demanda_model import Demanda
+    demanda = db.query(Demanda).filter(
+        Demanda.id_demanda == id_demanda,
+        Demanda.id_empresa_comprador == id_empresa
+    ).first()
+    
+    if not demanda:
+        raise HTTPException(status_code=404, detail="Demanda não encontrada ou acesso negado.")
+        
+    try:
+        token = credentials.credentials
+        return DemandaService.obter_cotacoes_logistica(id_demanda, token)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao obter cotações de frete: {str(e)}")
+
+
+@router.post("/{id_demanda}/contratar-frete", response_model=DemandaResponseDTO)
+def contratar_frete(
+    id_demanda: str,
+    payload: dict,
+    db: Session = Depends(get_db),
+    id_empresa: str = Depends(get_current_empresa_id),
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """
+    Proxy REST para contratar uma cotação de frete selecionada.
+    Atualiza localmente os campos de frete no banco da demanda.
+    """
+    cotacao_id = payload.get("cotacao_id")
+    if not cotacao_id:
+        raise HTTPException(status_code=400, detail="O campo 'cotacao_id' é obrigatório no corpo da requisição.")
+        
+    try:
+        token = credentials.credentials
+        return DemandaService.contratar_frete_logistica(db, id_demanda, id_empresa, cotacao_id, token)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao contratar frete: {str(e)}")

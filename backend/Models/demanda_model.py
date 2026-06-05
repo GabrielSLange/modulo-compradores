@@ -26,6 +26,20 @@ class Demanda(Base):
     data_criacao = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     atualizado_em = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
 
+    # Campos para Integração Logística e Negociação
+    tipo_transporte = Column(String(50), nullable=True, default="RODOVIARIO")
+    peso_carga = Column(Numeric(12, 2), nullable=True)
+    cep_origem = Column(String(9), nullable=True)
+    cep_destino = Column(String(9), nullable=True)
+    id_fornecedor = Column(String, nullable=True)
+    preco_final = Column(Numeric(12, 2), nullable=True)
+    valor_total = Column(Numeric(12, 2), nullable=True)
+
+    # Campos de contratação do frete (Logística)
+    id_frete_selecionado = Column(String, nullable=True)
+    valor_frete = Column(Numeric(12, 2), nullable=True)
+    status_frete = Column(String(30), nullable=True, default="PENDENTE")
+
     endereco = relationship("EnderecoEntrega", back_populates="demandas")
     recorrencia = relationship("DemandaRecorrencia", back_populates="demanda", uselist=False)
     wishlist_items = relationship("WishlistItem", back_populates="demanda_gerada")

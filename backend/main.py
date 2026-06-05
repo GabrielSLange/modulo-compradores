@@ -8,6 +8,7 @@ from Jobs.recorrencia_job import iniciar_scheduler
 from Events.Consumers.produto_consumer import iniciar_consumidor_produtos
 from Events.Consumers.pedido_consumer import iniciar_consumidor_pedidos
 from Events.Consumers.negociacao_consumer import iniciar_consumidor_negociacoes
+from Events.Consumers.logistica_consumer import iniciar_consumidor_logistica
 
 # Importações para o banco de dados local
 from Data.database import engine, SQLALCHEMY_DATABASE_URL, Base
@@ -60,6 +61,14 @@ async def lifespan(app: FastAPI):
     )
     thread_kafka_negociacoes.start()
     print("[INFO] Consumidor Kafka de Negociações iniciado em background.")
+
+    thread_kafka_logistica = Thread(
+        target=iniciar_consumidor_logistica,
+        name="kafka-logistica-consumer",
+        daemon=True,
+    )
+    thread_kafka_logistica.start()
+    print("[INFO] Consumidor Kafka de Logística iniciado em background.")
 
     yield
     # Ao encerrar o servidor, a thread daemon é finalizada automaticamente.
