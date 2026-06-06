@@ -120,6 +120,13 @@ class DemandaProducer:
         DemandaProducer._publicar(topico, id_nova_demanda, evento)
 
     @staticmethod
+    def publicar_demanda_cancelada(id_demanda: str, dados_demanda: dict):
+        topico = get_env("KAFKA_TOPIC_DEMANDA_CANCELADA", required=True)
+        payload = {"id_demanda": id_demanda, **dados_demanda}
+        evento = DemandaProducer._montar_evento(topico, id_demanda, payload)
+        DemandaProducer._publicar(topico, id_demanda, evento)
+
+    @staticmethod
     def publicar_pedido_criado(id_demanda: str, dados_pedido: dict):
         """Publica evento quando demanda eh promovida pra pedido.
 

@@ -88,6 +88,18 @@ class DemandaService:
             }
             DemandaProducer.publicar_pedido_atualizado(demanda.id_demanda, payload_evento)
 
+        if novo_status == "cancelada":
+            payload_cancelamento = {
+                "id_empresa_comprador": demanda.id_empresa_comprador,
+                "id_produto": demanda.id_produto,
+                "quantidade_desejada": float(demanda.quantidade_desejada),
+                "preco_maximo": float(demanda.preco_maximo) if demanda.preco_maximo else None,
+                "tipo_demanda": demanda.is_recorrente,
+                "prioridade": demanda.prioridade,
+                "status": "cancelada"
+            }
+            DemandaProducer.publicar_demanda_cancelada(demanda.id_demanda, payload_cancelamento)
+
         return DemandaResponseDTO.model_validate(demanda)
 
     @staticmethod
