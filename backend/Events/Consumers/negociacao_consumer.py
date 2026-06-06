@@ -39,6 +39,20 @@ def processar_evento_negociacao(event_data: dict) -> None:
     valor_total = float(p.get("valor_total")) if p.get("valor_total") is not None else None
     quantidade = float(p.get("quantidade")) if p.get("quantidade") is not None else None
     fornecimento_id = p.get("fornecimento_id")
+    motivo_fechamento = p.get("motivo_fechamento")
+
+    # Se a negociação foi fechada sem fornecedor vencedor (venda não concluída, ex: expirado, cancelado pelo admin, etc.)
+    if not id_fornecedor:
+        with SessionLocal() as db:
+            demanda = db.query(Demanda).filter(Demanda.id_demanda == demanda_id).first()
+            if demanda:
+                # Mantém a quantidade original e retorna o status para "aberta"
+                demanda.status = "aberta"
+                db.commit()
+                logger.info(f"Negociação da demanda {demanda_id} fechada sem sucesso (Motivo: {motivo_fechamento}). Status revertido para 'aberta'.")
+            else:
+                logger.warning(f"Demanda {demanda_id} não encontrada para reverter status pós-fechamento sem sucesso.")
+        return
 
     with SessionLocal() as db:
         demanda = db.query(Demanda).filter(Demanda.id_demanda == demanda_id).first()
