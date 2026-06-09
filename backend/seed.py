@@ -12,6 +12,7 @@ from Models import (
     demanda_recorrencia_model,
     wishlist_item_model,
     produto_cache_model,
+    pedido_model,
 )
 
 ID_EMPRESA   = "f47ac10b-58cc-4372-a567-0e02b2c3d479"

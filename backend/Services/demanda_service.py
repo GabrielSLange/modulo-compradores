@@ -215,6 +215,14 @@ class DemandaService:
         else:
             demanda.peso_carga = peso_carga
 
+        # Garante a existência do registro na tabela 'pedido' para evitar violação de FK na Logística
+        from Models.pedido_model import Pedido
+        pedido_existente = db.query(Pedido).filter(Pedido.id == demanda.id_demanda).first()
+        if not pedido_existente:
+            novo_pedido = Pedido(id=demanda.id_demanda, status="atendida")
+            db.add(novo_pedido)
+            db.flush()
+
         db.commit()
         db.refresh(demanda)
 
