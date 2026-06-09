@@ -56,6 +56,7 @@ def processar_recorrencias():
                 id_usuario_criador=demanda_pai.id_usuario_criador,
                 id_produto=demanda_pai.id_produto,
                 id_endereco_destino=demanda_pai.id_endereco_destino,
+                id_fornecimento=demanda_pai.id_fornecimento,
                 quantidade_desejada=rec.quantidade_por_periodo,
                 preco_maximo=demanda_pai.preco_maximo,
                 prioridade=demanda_pai.prioridade,
@@ -70,7 +71,9 @@ def processar_recorrencias():
                 "id_empresa_comprador": nova_demanda.id_empresa_comprador,
                 "id_produto": nova_demanda.id_produto,
                 "quantidade_desejada": float(nova_demanda.quantidade_desejada),
-                "demanda_pai_origem": demanda_pai.id_demanda 
+                "demanda_pai_origem": demanda_pai.id_demanda,
+                "id_fornecimento": nova_demanda.id_fornecimento,
+                "status": nova_demanda.status
             }
             
             DemandaProducer.publicar_demanda_recorrente_gerada(nova_demanda.id_demanda, payload_evento)

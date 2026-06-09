@@ -11,11 +11,48 @@ from Services.estoque_service import EstoqueService
 class DemandaService:
     @staticmethod
     def criar_demanda(db: Session, dto: DemandaCreateDTO, id_empresa_comprador: str, id_usuario_criador: str) -> DemandaResponseDTO:
+        # Resolve id_fornecimento automaticamente se não vier no DTO
+        id_fornecimento_final = getattr(dto, "id_fornecimento", None)
+        if not id_fornecimento_final:
+            from uuid import UUID
+            from Data.fornecimento_database import FornecimentoSessionLocal
+            from Models.fornecimento_model import Fornecimento
+            try:
+                prod_uuid = UUID(str(dto.id_produto))
+                with FornecimentoSessionLocal() as fornecimento_db:
+                    # 1. Tenta achar um fornecimento ativo com estoque suficiente
+                    fornecedor_apto = (
+                        fornecimento_db.query(Fornecimento)
+                        .filter(
+                            Fornecimento.produto_id == prod_uuid,
+                            Fornecimento.quantidade_disponivel >= dto.quantidade_desejada,
+                            Fornecimento.ativo.is_(True),
+                        )
+                        .first()
+                    )
+                    if fornecedor_apto:
+                        id_fornecimento_final = str(fornecedor_apto.id)
+                    else:
+                        # 2. Fallback: Pega qualquer fornecimento ativo deste produto
+                        qualquer_fornecedor = (
+                            fornecimento_db.query(Fornecimento)
+                            .filter(
+                                Fornecimento.produto_id == prod_uuid,
+                                Fornecimento.ativo.is_(True),
+                            )
+                            .first()
+                        )
+                        if qualquer_fornecedor:
+                            id_fornecimento_final = str(qualquer_fornecedor.id)
+            except ValueError:
+                pass
+
         # 1. Cria a Demanda (A Raiz)
         nova_demanda = Demanda(
             id_empresa_comprador=id_empresa_comprador,
             id_usuario_criador=id_usuario_criador,
             id_produto=dto.id_produto,
+            id_fornecimento=id_fornecimento_final,
             id_endereco_destino=dto.id_endereco_destino,
             quantidade_desejada=dto.quantidade_desejada,
             preco_maximo=dto.preco_maximo,
@@ -50,7 +87,9 @@ class DemandaService:
             "quantidade_desejada": float(nova_demanda.quantidade_desejada),
             "preco_maximo": float(nova_demanda.preco_maximo) if nova_demanda.preco_maximo else None,
             "tipo_demanda": nova_demanda.is_recorrente,
-            "prioridade": nova_demanda.prioridade
+            "prioridade": nova_demanda.prioridade,
+            "id_fornecimento": nova_demanda.id_fornecimento,
+            "status": nova_demanda.status
         }
         DemandaProducer.publicar_demanda_criada(nova_demanda.id_demanda, payload_evento)
 
@@ -96,6 +135,7 @@ class DemandaService:
                 "preco_maximo": float(demanda.preco_maximo) if demanda.preco_maximo else None,
                 "tipo_demanda": demanda.is_recorrente,
                 "prioridade": demanda.prioridade,
+                "id_fornecimento": demanda.id_fornecimento,
                 "status": "cancelada"
             }
             DemandaProducer.publicar_demanda_cancelada(demanda.id_demanda, payload_cancelamento)

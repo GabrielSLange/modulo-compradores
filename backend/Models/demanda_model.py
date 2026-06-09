@@ -12,6 +12,7 @@ class Demanda(Base):
     id_empresa_comprador = Column(String, nullable=False)
     id_usuario_criador = Column(String, nullable=False)
     id_produto = Column(String, nullable=False)
+    id_fornecimento = Column(String, nullable=True)
     
     # nullable=True adicionado para aceitar a demanda sem endereço do seed.py
     id_endereco_destino = Column(String, ForeignKey("endereco_entrega.id_endereco"), nullable=True)

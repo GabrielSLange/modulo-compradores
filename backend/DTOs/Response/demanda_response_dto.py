@@ -8,6 +8,7 @@ class DemandaResponseDTO(BaseModel):
     id_empresa_comprador: UUID
     id_usuario_criador: UUID
     id_produto: UUID
+    id_fornecimento: Optional[UUID] = None
     id_endereco_entrega: Optional[UUID] = Field(validation_alias="id_endereco_destino", default=None)
     quantidade_desejada: float
     prioridade: str
