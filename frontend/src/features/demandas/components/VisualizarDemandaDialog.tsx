@@ -57,14 +57,14 @@ export function VisualizarDemandaDialog({ demanda }: Props) {
       <DialogTrigger asChild>
         <Button size="icon" variant="ghost" title="Detalhes"><Eye className="size-4" /></Button>
       </DialogTrigger>
-      <DialogContent className="max-w-xl">
+      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            Demanda <span className="font-mono text-sm text-muted-foreground">{demanda.id}</span>
+            {demanda.is_pedido ? "Pedido" : "Demanda"} <span className="font-mono text-sm text-muted-foreground">{demanda.id}</span>
             <StatusBadge status={demanda.status} />
           </DialogTitle>
           <DialogDescription>
-            Criada em {format(new Date(demanda.data_criacao), "dd/MM/yyyy 'às' HH:mm")}
+            {demanda.is_pedido ? "Criado" : "Criada"} em {format(new Date(demanda.data_criacao), "dd/MM/yyyy 'às' HH:mm")}
           </DialogDescription>
         </DialogHeader>
 
