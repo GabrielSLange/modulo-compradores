@@ -93,10 +93,12 @@ def promover_demanda_para_pedido(
     id_demanda: str,
     db: Session = Depends(get_db),
     fornecimento_db: Session = Depends(get_fornecimento_db),
-    id_empresa: str = Depends(get_current_empresa_id)
+    id_empresa: str = Depends(get_current_empresa_id),
+    credentials: HTTPAuthorizationCredentials = Depends(security),
 ):
     try:
-        return DemandaService.promover_para_pedido(db, fornecimento_db, id_demanda, id_empresa)
+        token = credentials.credentials
+        return DemandaService.promover_para_pedido(db, fornecimento_db, id_demanda, id_empresa, token=token)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
     except OperationalError:

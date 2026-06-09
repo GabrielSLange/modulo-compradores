@@ -32,7 +32,9 @@ def processar_evento_logistica(event_data: dict) -> None:
         return
 
     with SessionLocal() as db:
-        demanda = db.query(Demanda).filter(Demanda.id_demanda == id_demanda).first()
+        demanda = db.query(Demanda).filter(
+            (Demanda.id_demanda == id_demanda) | (Demanda.id_solicitacao_frete == id_demanda)
+        ).first()
         if not demanda:
             logger.debug(f"Demanda {id_demanda} não encontrada para atualizar status de frete.")
             return

@@ -155,6 +155,7 @@ class DemandaService:
         peso_carga: Optional[float] = None,
         cep_origem: Optional[str] = None,
         cep_destino: Optional[str] = None,
+        token: Optional[str] = None,
     ) -> DemandaResponseDTO:
         demanda = db.query(Demanda).filter(
             Demanda.id_demanda == id_demanda,
@@ -217,6 +218,41 @@ class DemandaService:
         db.commit()
         db.refresh(demanda)
 
+        # Chamada REST para a Logística para criar a solicitação de frete
+        if token:
+            import httpx
+            import os
+            import logging
+            
+            logistica_logger = logging.getLogger("modulo-compradores.logistica")
+            logistica_url = os.getenv("LOGISTICA_API_URL", "http://34.8.17.245/api/logistica")
+            url_iniciar = f"{logistica_url}/demo-iniciar-cotacao"
+            headers = {"Authorization": f"Bearer {token}"}
+            
+            payload_logistica = {
+                "pedido_id": demanda.id_demanda,
+                "tipo_transporte": demanda.tipo_transporte or "RODOVIARIO",
+                "cep_origem": demanda.cep_origem or "74000000",
+                "cep_destino": demanda.cep_destino or "01001000",
+                "peso_carga": float(demanda.peso_carga) if demanda.peso_carga else 0.0
+            }
+            
+            try:
+                with httpx.Client(timeout=10.0) as client:
+                    resp = client.post(url_iniciar, json=payload_logistica, headers=headers)
+                    if resp.status_code == 201:
+                        resp_data = resp.json()
+                        solicitacao_id = resp_data.get("id")
+                        if solicitacao_id:
+                            demanda.id_solicitacao_frete = str(solicitacao_id)
+                            db.commit()
+                            db.refresh(demanda)
+                            logistica_logger.info(f"Solicitação de frete criada na Logística: ID {solicitacao_id} para demanda {demanda.id_demanda}")
+                    else:
+                        logistica_logger.error(f"Erro ao criar solicitação na Logística. Status: {resp.status_code}, Detalhe: {resp.text}")
+            except Exception as e:
+                logistica_logger.exception(f"Falha ao conectar com o serviço de Logística para criar solicitação: {e}")
+
         # Monta o payload conforme exigências da Equipe de Logística (pedido_criado)
         payload_evento = {
             "pedido_id": demanda.id_demanda,  # UUID esperado pela logística
@@ -242,9 +278,21 @@ class DemandaService:
     def obter_cotacoes_logistica(id_demanda: str, token: str) -> list:
         import os
         import httpx
+        from Data.database import SessionLocal
         
+        # Busca o id_solicitacao_frete no banco
+        with SessionLocal() as db:
+            demanda = db.query(Demanda).filter(Demanda.id_demanda == id_demanda).first()
+            id_solicitacao = demanda.id_solicitacao_frete if (demanda and demanda.id_solicitacao_frete) else None
+            
+        if not id_solicitacao:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"id_solicitacao_frete não encontrado para demanda {id_demanda}. Usando id_demanda como fallback.")
+            id_solicitacao = id_demanda
+            
         logistica_url = os.getenv("LOGISTICA_API_URL", "http://34.8.17.245/api/logistica")
-        url = f"{logistica_url}/solicitacoes/{id_demanda}/cotacoes"
+        url = f"{logistica_url}/solicitacoes/{id_solicitacao}/cotacoes"
         headers = {"Authorization": f"Bearer {token}"}
         
         try:
@@ -281,11 +329,12 @@ class DemandaService:
         if not demanda.is_pedido:
             raise ValueError("Essa demanda ainda não foi promovida a pedido (não possui fornecedor ou lance fechado).")
             
+        id_solicitacao = demanda.id_solicitacao_frete if demanda.id_solicitacao_frete else id_demanda
         logistica_url = os.getenv("LOGISTICA_API_URL", "http://34.8.17.245/api/logistica")
         url = f"{logistica_url}/demo-contratar-frete"
         headers = {"Authorization": f"Bearer {token}"}
         payload = {
-            "solicitacao_id": id_demanda,
+            "solicitacao_id": id_solicitacao,
             "cotacao_id": cotacao_id
         }
         
