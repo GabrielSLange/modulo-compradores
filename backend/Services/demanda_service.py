@@ -471,9 +471,32 @@ class DemandaService:
             demanda.valor_frete = valor_frete
         demanda.status_frete = "SELECIONADO"
         
-        db.commit()
-        db.refresh(demanda)
+        import time
+        from sqlalchemy.exc import IntegrityError
         
+        max_retries = 5
+        for attempt in range(max_retries):
+            try:
+                db.commit()
+                break
+            except IntegrityError as e:
+                db.rollback()
+                if attempt == max_retries - 1:
+                    raise ValueError(f"Erro ao contratar frete no banco local (violação de FK frete_selecionado): {e}")
+                time.sleep(0.3)
+                # Refetch and update
+                demanda = db.query(Demanda).filter(
+                    Demanda.id_demanda == id_demanda,
+                    Demanda.id_empresa_comprador == id_empresa_comprador
+                ).first()
+                if not demanda:
+                    raise ValueError("Demanda não encontrada após rollback de contratação de frete.")
+                demanda.id_frete_selecionado = cotacao_id
+                if valor_frete is not None:
+                    demanda.valor_frete = valor_frete
+                demanda.status_frete = "SELECIONADO"
+                
+        db.refresh(demanda)
         return DemandaResponseDTO.model_validate(demanda)
 
     @staticmethod
