@@ -162,3 +162,25 @@ def contratar_frete(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao contratar frete: {str(e)}")
+
+
+@router.post("/{id_demanda}/simular-pedido", response_model=DemandaResponseDTO)
+def simular_pedido(
+    id_demanda: str,
+    payload: dict = {},
+    db: Session = Depends(get_db),
+    id_empresa: str = Depends(get_current_empresa_id),
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """
+    Endpoint de simulação/teste: força a promoção de uma demanda para pedido,
+    registra o ID na tabela de pedidos e dispara a solicitação de frete na Logística.
+    Bypassa validações externas de estoque.
+    """
+    try:
+        token = credentials.credentials
+        return DemandaService.simular_pedido_teste(db, id_demanda, id_empresa, payload, token)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao simular pedido: {str(e)}")

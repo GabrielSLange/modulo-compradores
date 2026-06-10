@@ -377,3 +377,110 @@ class DemandaService:
         db.refresh(demanda)
         
         return DemandaResponseDTO.model_validate(demanda)
+
+    @staticmethod
+    def simular_pedido_teste(
+        db: Session,
+        id_demanda: str,
+        id_empresa_comprador: str,
+        payload: dict,
+        token: str
+    ) -> DemandaResponseDTO:
+        import uuid
+        from Models.pedido_model import Pedido
+        
+        demanda = db.query(Demanda).filter(
+            Demanda.id_demanda == id_demanda,
+            Demanda.id_empresa_comprador == id_empresa_comprador
+        ).first()
+
+        if not demanda:
+            raise ValueError("Demanda não encontrada ou permissão negada.")
+
+        # Força campos de pedido
+        demanda.is_pedido = True
+        demanda.status = "atendida"
+        demanda.id_fornecedor = payload.get("id_fornecedor") or str(uuid.uuid4())
+        demanda.preco_final = payload.get("preco_final") or 150.00
+        demanda.valor_total = payload.get("valor_total") or (float(demanda.quantidade_desejada) * 150.00)
+        demanda.tipo_transporte = payload.get("tipo_transporte") or "RODOVIARIO"
+        
+        # CEP destino
+        cep_dest = payload.get("cep_destino")
+        if not cep_dest and demanda.endereco:
+            cep_dest = demanda.endereco.cep
+        if cep_dest:
+            cep_dest = cep_dest.replace("-", "").replace(" ", "")
+        demanda.cep_destino = cep_dest or "01001000"
+        
+        demanda.cep_origem = payload.get("cep_origem") or "74000000"
+        
+        peso = payload.get("peso_carga")
+        if peso is None:
+            demanda.peso_carga = float(demanda.quantidade_desejada) * 1.5
+        else:
+            demanda.peso_carga = peso
+
+        # Insere na tabela shared 'pedido'
+        pedido_existente = db.query(Pedido).filter(Pedido.id == demanda.id_demanda).first()
+        if not pedido_existente:
+            novo_pedido = Pedido(id=demanda.id_demanda, status="atendida")
+            db.add(novo_pedido)
+            db.flush()
+
+        db.commit()
+        db.refresh(demanda)
+
+        # Chama a API de Logística
+        if token:
+            import httpx
+            import os
+            import logging
+            
+            logistica_logger = logging.getLogger("modulo-compradores.logistica")
+            logistica_url = os.getenv("LOGISTICA_API_URL", "http://34.8.17.245/api/logistica")
+            url_iniciar = f"{logistica_url}/demo-iniciar-cotacao"
+            headers = {"Authorization": f"Bearer {token}"}
+            
+            payload_logistica = {
+                "pedido_id": demanda.id_demanda,
+                "tipo_transporte": demanda.tipo_transporte or "RODOVIARIO",
+                "cep_origem": demanda.cep_origem or "74000000",
+                "cep_destino": demanda.cep_destino or "01001000",
+                "peso_carga": float(demanda.peso_carga) if demanda.peso_carga else 0.0
+            }
+            
+            try:
+                with httpx.Client(timeout=10.0) as client:
+                    resp = client.post(url_iniciar, json=payload_logistica, headers=headers)
+                    if resp.status_code == 201:
+                        resp_data = resp.json()
+                        solicitacao_id = resp_data.get("id")
+                        if solicitacao_id:
+                            demanda.id_solicitacao_frete = str(solicitacao_id)
+                            db.commit()
+                            db.refresh(demanda)
+                    else:
+                        logistica_logger.error(f"Erro ao criar solicitação na Logística: {resp.status_code}, {resp.text}")
+            except Exception as e:
+                logistica_logger.exception(f"Falha ao conectar com o serviço de Logística: {e}")
+
+        # Publica evento de pedido_criado no Kafka
+        payload_evento = {
+            "pedido_id": demanda.id_demanda,
+            "tipo_transporte": demanda.tipo_transporte,
+            "peso_carga": float(demanda.peso_carga) if demanda.peso_carga else 0.0,
+            "cep_origem": demanda.cep_origem or "74000000",
+            "cep_destino": demanda.cep_destino or "01001000",
+            "id_demanda": demanda.id_demanda,
+            "id_empresa_comprador": demanda.id_empresa_comprador,
+            "id_produto": demanda.id_produto,
+            "quantidade": float(demanda.quantidade_desejada),
+            "preco_unitario_final": float(demanda.preco_final) if demanda.preco_final else None,
+            "valor_total": float(demanda.valor_total) if demanda.valor_total else None,
+            "id_fornecedor": demanda.id_fornecedor,
+        }
+        from Events.Producers.demanda_producer import DemandaProducer
+        DemandaProducer.publicar_pedido_criado(demanda.id_demanda, payload_evento)
+
+        return DemandaResponseDTO.model_validate(demanda)
