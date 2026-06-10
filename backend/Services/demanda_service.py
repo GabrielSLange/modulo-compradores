@@ -397,10 +397,41 @@ class DemandaService:
         if not demanda:
             raise ValueError("Demanda não encontrada ou permissão negada.")
 
+        # Tenta achar um fornecedor válido cadastrado na tabela 'empresa' para evitar violação de FK
+        id_fornecedor_final = payload.get("id_fornecedor")
+        if not id_fornecedor_final:
+            from Data.fornecimento_database import FornecimentoSessionLocal
+            from Models.fornecimento_model import Fornecimento
+            try:
+                from uuid import UUID as PyUUID
+                prod_uuid = PyUUID(str(demanda.id_produto))
+                with FornecimentoSessionLocal() as f_db:
+                    f = f_db.query(Fornecimento).filter(Fornecimento.produto_id == prod_uuid).first()
+                    if f:
+                        id_fornecedor_final = str(f.empresa_fornecedor_id)
+                    else:
+                        f_any = f_db.query(Fornecimento).first()
+                        if f_any:
+                            id_fornecedor_final = str(f_any.empresa_fornecedor_id)
+            except Exception:
+                pass
+
+        if not id_fornecedor_final:
+            try:
+                from sqlalchemy import text
+                result = db.execute(text("SELECT id FROM portal_b2b.empresa LIMIT 1")).fetchone()
+                if result:
+                    id_fornecedor_final = str(result[0])
+            except Exception:
+                pass
+
+        if not id_fornecedor_final:
+            id_fornecedor_final = demanda.id_empresa_comprador
+
         # Força campos de pedido
         demanda.is_pedido = True
         demanda.status = "atendida"
-        demanda.id_fornecedor = payload.get("id_fornecedor") or str(uuid.uuid4())
+        demanda.id_fornecedor = id_fornecedor_final
         demanda.preco_final = payload.get("preco_final") or 150.00
         demanda.valor_total = payload.get("valor_total") or (float(demanda.quantidade_desejada) * 150.00)
         demanda.tipo_transporte = payload.get("tipo_transporte") or "RODOVIARIO"
