@@ -336,7 +336,7 @@ class DemandaService:
             headers = {"Authorization": f"Bearer {token}"}
             
             payload_logistica = {
-                "pedido_id": demanda.id_demanda,
+                "pedido_id": str(demanda.id_demanda),
                 "tipo_transporte": demanda.tipo_transporte or "RODOVIARIO",
                 "cep_origem": demanda.cep_origem or "74000000",
                 "cep_destino": demanda.cep_destino or "01001000",
@@ -440,8 +440,8 @@ class DemandaService:
         url = f"{logistica_url}/demo-contratar-frete"
         headers = {"Authorization": f"Bearer {token}"}
         payload = {
-            "solicitacao_id": id_solicitacao,
-            "cotacao_id": cotacao_id
+            "solicitacao_id": str(id_solicitacao),
+            "cotacao_id": str(cotacao_id)
         }
         
         # Obtém o valor do frete antes de contratar para salvar em nosso banco local
@@ -669,7 +669,7 @@ class DemandaService:
             headers = {"Authorization": f"Bearer {token}"}
             
             payload_logistica = {
-                "pedido_id": demanda.id_demanda,
+                "pedido_id": str(demanda.id_demanda),
                 "tipo_transporte": demanda.tipo_transporte or "RODOVIARIO",
                 "cep_origem": demanda.cep_origem or "74000000",
                 "cep_destino": demanda.cep_destino or "01001000",
