@@ -29,7 +29,7 @@ function ListarESelecionarFrete({ idDemanda }: { idDemanda: string }) {
             <span className="text-xs text-muted-foreground">Prazo: {c.prazo_dias || c.prazo} dias</span>
           </div>
           <div className="flex items-center gap-3">
-            <span className="font-semibold text-primary">R$ {c.valor?.toFixed(2)}</span>
+            <span className="font-semibold text-primary">R$ {Number(c.valor || 0).toFixed(2)}</span>
             <Button 
               size="sm" 
               onClick={() => contratar.mutate({ id_demanda: idDemanda, cotacao_id: c.id })}
@@ -84,7 +84,7 @@ export function VisualizarDemandaDialog({ demanda }: Props) {
           <div className="space-y-1">
             <span className="text-xs font-semibold uppercase text-muted-foreground">Preço Máximo</span>
             <div className="font-medium">
-              {demanda.preco_maximo ? `R$ ${demanda.preco_maximo.toFixed(2)}` : "Não definido"}
+              {demanda.preco_maximo ? `R$ ${Number(demanda.preco_maximo).toFixed(2)}` : "Não definido"}
             </div>
           </div>
 
@@ -151,13 +151,13 @@ export function VisualizarDemandaDialog({ demanda }: Props) {
                   <span className="text-xs text-muted-foreground block">Modal de Transporte</span>
                   <span className="font-medium capitalize">{demanda.tipo_transporte?.toLowerCase() || "N/A"}</span>
                 </div>
-                <div>
+                 <div>
                   <span className="text-xs text-muted-foreground block">Preço Final Unitário</span>
-                  <span className="font-medium text-green-600">R$ {demanda.preco_final?.toFixed(2) || "0.00"}</span>
+                  <span className="font-medium text-green-600">R$ {demanda.preco_final !== undefined && demanda.preco_final !== null ? Number(demanda.preco_final).toFixed(2) : "0.00"}</span>
                 </div>
                 <div>
                   <span className="text-xs text-muted-foreground block">Total dos Produtos</span>
-                  <span className="font-medium text-green-600">R$ {demanda.valor_total?.toFixed(2) || "0.00"}</span>
+                  <span className="font-medium text-green-600">R$ {demanda.valor_total !== undefined && demanda.valor_total !== null ? Number(demanda.valor_total).toFixed(2) : "0.00"}</span>
                 </div>
                 <div>
                   <span className="text-xs text-muted-foreground block">Peso da Carga</span>
@@ -182,7 +182,7 @@ export function VisualizarDemandaDialog({ demanda }: Props) {
                   <div className="p-3 bg-blue-50/50 text-blue-900 border border-blue-200/50 rounded-lg text-sm flex justify-between items-center">
                     <div>
                       <span className="block text-xs text-blue-700">Frete Contratado</span>
-                      <span className="font-semibold">Valor: R$ {demanda.valor_frete?.toFixed(2) || "0.00"}</span>
+                      <span className="font-semibold">Valor: R$ {demanda.valor_frete !== undefined && demanda.valor_frete !== null ? Number(demanda.valor_frete).toFixed(2) : "0.00"}</span>
                     </div>
                     <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded font-semibold text-xs uppercase tracking-wider">
                       {demanda.status_frete || "SELECIONADO"}
