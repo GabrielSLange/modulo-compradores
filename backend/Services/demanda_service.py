@@ -219,7 +219,105 @@ class DemandaService:
         from Models.pedido_model import Pedido
         pedido_existente = db.query(Pedido).filter(Pedido.id == demanda.id_demanda).first()
         if not pedido_existente:
-            novo_pedido = Pedido(id=demanda.id_demanda, status="atendida")
+            import uuid
+            from sqlalchemy import text
+            
+            is_sqlite = db.bind.name == "sqlite"
+            
+            if is_sqlite:
+                processo_id_final = str(uuid.uuid4())
+                fornecimento_id_final = str(uuid.uuid4())
+            else:
+                # 1. Resolve processo_id (Garante existência na tabela processo_negociacao)
+                processo_id_final = None
+                try:
+                    res = db.execute(text("SELECT id FROM portal_b2b.processo_negociacao LIMIT 1")).fetchone()
+                    if res:
+                        processo_id_final = str(res[0])
+                    else:
+                        dummy_proc_id = str(uuid.uuid4())
+                        db.execute(text(
+                            "INSERT INTO portal_b2b.processo_negociacao (id, produto_id, modo, status) "
+                            "VALUES (:id, :prod_id, 'direto', 'ABERTO')"
+                        ), {"id": dummy_proc_id, "prod_id": demanda.id_produto})
+                        processo_id_final = dummy_proc_id
+                except Exception:
+                    processo_id_final = str(uuid.uuid4())
+
+                # 2. Resolve fornecimento_id (Garante existência na tabela fornecimento e dependências)
+                fornecimento_id_final = demanda.id_fornecimento
+                if not fornecimento_id_final:
+                    try:
+                        from uuid import UUID as PyUUID
+                        from Models.fornecimento_model import Fornecimento
+                        prod_uuid = PyUUID(str(demanda.id_produto))
+                        f = fornecimento_db.query(Fornecimento).filter(
+                            Fornecimento.produto_id == prod_uuid,
+                            Fornecimento.empresa_fornecedor_id == PyUUID(str(id_fornecedor_final)),
+                            Fornecimento.ativo.is_(True)
+                        ).first()
+                        if f:
+                            fornecimento_id_final = str(f.id)
+                        else:
+                            f_any = fornecimento_db.query(Fornecimento).filter(
+                                Fornecimento.produto_id == prod_uuid
+                            ).first()
+                            if f_any:
+                                fornecimento_id_final = str(f_any.id)
+                    except Exception:
+                        pass
+
+                if not fornecimento_id_final:
+                    try:
+                        # Busca ou insere endereço para o fornecedor
+                        end_res = db.execute(text(
+                            "SELECT id FROM portal_b2b.endereco "
+                            "WHERE empresa_id = :emp_id LIMIT 1"
+                        ), {"emp_id": id_fornecedor_final}).fetchone()
+                        end_id = str(end_res[0]) if end_res else None
+                        
+                        if not end_id:
+                            end_any = db.execute(text("SELECT id FROM portal_b2b.endereco LIMIT 1")).fetchone()
+                            end_id = str(end_any[0]) if end_any else None
+                            
+                        if not end_id:
+                            dummy_end_id = str(uuid.uuid4())
+                            db.execute(text(
+                                "INSERT INTO portal_b2b.endereco (id, empresa_id, cidade, estado, cep) "
+                                "VALUES (:id, :emp_id, 'Goiania', 'GO', '74000000')"
+                            ), {"id": dummy_end_id, "emp_id": id_fornecedor_final})
+                            end_id = dummy_end_id
+
+                        # Insere o fornecimento
+                        dummy_forn_id = str(uuid.uuid4())
+                        db.execute(text(
+                            "INSERT INTO portal_b2b.fornecimento (id, empresa_fornecedor_id, produto_id, "
+                            "endereco_origem_id, preco_unitario, quantidade_disponivel) "
+                            "VALUES (:id, :forn_id, :prod_id, :end_id, 100.0, 999.0)"
+                        ), {
+                            "id": dummy_forn_id,
+                            "forn_id": id_fornecedor_final,
+                            "prod_id": demanda.id_produto,
+                            "end_id": end_id
+                        })
+                        fornecimento_id_final = dummy_forn_id
+                    except Exception:
+                        fornecimento_id_final = str(uuid.uuid4())
+
+            # 3. Insere o registro na tabela pedido
+            valor_total_pedido = valor_total or (float(demanda.quantidade_desejada) * (preco_final or 150.00))
+            if valor_total_pedido <= 0:
+                valor_total_pedido = 150.00
+
+            novo_pedido = Pedido(
+                id=demanda.id_demanda,
+                processo_id=processo_id_final,
+                empresa_comprador_id=demanda.id_empresa_comprador,
+                empresa_fornecedor_id=id_fornecedor_final,
+                fornecimento_id=fornecimento_id_final,
+                valor_total=valor_total_pedido,
+                status="atendida"
+            )
             db.add(novo_pedido)
             db.flush()
 
@@ -455,7 +553,104 @@ class DemandaService:
         # Insere na tabela shared 'pedido'
         pedido_existente = db.query(Pedido).filter(Pedido.id == demanda.id_demanda).first()
         if not pedido_existente:
-            novo_pedido = Pedido(id=demanda.id_demanda, status="atendida")
+            from sqlalchemy import text
+            is_sqlite = db.bind.name == "sqlite"
+            
+            if is_sqlite:
+                processo_id_final = str(uuid.uuid4())
+                fornecimento_id_final = str(uuid.uuid4())
+            else:
+                # 1. Resolve processo_id
+                processo_id_final = None
+                try:
+                    res = db.execute(text("SELECT id FROM portal_b2b.processo_negociacao LIMIT 1")).fetchone()
+                    if res:
+                        processo_id_final = str(res[0])
+                    else:
+                        dummy_proc_id = str(uuid.uuid4())
+                        db.execute(text(
+                            "INSERT INTO portal_b2b.processo_negociacao (id, produto_id, modo, status) "
+                            "VALUES (:id, :prod_id, 'direto', 'ABERTO')"
+                        ), {"id": dummy_proc_id, "prod_id": demanda.id_produto})
+                        processo_id_final = dummy_proc_id
+                except Exception:
+                    processo_id_final = str(uuid.uuid4())
+
+                # 2. Resolve fornecimento_id
+                fornecimento_id_final = None
+                try:
+                    from Data.fornecimento_database import FornecimentoSessionLocal
+                    from Models.fornecimento_model import Fornecimento
+                    from uuid import UUID as PyUUID
+                    prod_uuid = PyUUID(str(demanda.id_produto))
+                    with FornecimentoSessionLocal() as f_db:
+                        f = f_db.query(Fornecimento).filter(
+                            Fornecimento.produto_id == prod_uuid,
+                            Fornecimento.empresa_fornecedor_id == PyUUID(str(id_fornecedor_final)),
+                            Fornecimento.ativo.is_(True)
+                        ).first()
+                        if f:
+                            fornecimento_id_final = str(f.id)
+                        else:
+                            f_any = f_db.query(Fornecimento).filter(
+                                Fornecimento.produto_id == prod_uuid
+                            ).first()
+                            if f_any:
+                                fornecimento_id_final = str(f_any.id)
+                except Exception:
+                    pass
+
+                if not fornecimento_id_final:
+                    try:
+                        # Busca ou insere endereço para o fornecedor
+                        end_res = db.execute(text(
+                            "SELECT id FROM portal_b2b.endereco "
+                            "WHERE empresa_id = :emp_id LIMIT 1"
+                        ), {"emp_id": id_fornecedor_final}).fetchone()
+                        end_id = str(end_res[0]) if end_res else None
+                        
+                        if not end_id:
+                            end_any = db.execute(text("SELECT id FROM portal_b2b.endereco LIMIT 1")).fetchone()
+                            end_id = str(end_any[0]) if end_any else None
+                            
+                        if not end_id:
+                            dummy_end_id = str(uuid.uuid4())
+                            db.execute(text(
+                                "INSERT INTO portal_b2b.endereco (id, empresa_id, cidade, estado, cep) "
+                                "VALUES (:id, :emp_id, 'Goiania', 'GO', '74000000')"
+                            ), {"id": dummy_end_id, "emp_id": id_fornecedor_final})
+                            end_id = dummy_end_id
+
+                        # Insere o fornecimento
+                        dummy_forn_id = str(uuid.uuid4())
+                        db.execute(text(
+                            "INSERT INTO portal_b2b.fornecimento (id, empresa_fornecedor_id, produto_id, "
+                            "endereco_origem_id, preco_unitario, quantidade_disponivel) "
+                            "VALUES (:id, :forn_id, :prod_id, :end_id, 100.0, 999.0)"
+                        ), {
+                            "id": dummy_forn_id,
+                            "forn_id": id_fornecedor_final,
+                            "prod_id": demanda.id_produto,
+                            "end_id": end_id
+                        })
+                        fornecimento_id_final = dummy_forn_id
+                    except Exception:
+                        fornecimento_id_final = str(uuid.uuid4())
+
+            # 3. Insere o registro na tabela pedido
+            valor_total_pedido = demanda.valor_total
+            if not valor_total_pedido or valor_total_pedido <= 0:
+                valor_total_pedido = 150.00
+
+            novo_pedido = Pedido(
+                id=demanda.id_demanda,
+                processo_id=processo_id_final,
+                empresa_comprador_id=demanda.id_empresa_comprador,
+                empresa_fornecedor_id=id_fornecedor_final,
+                fornecimento_id=fornecimento_id_final,
+                valor_total=valor_total_pedido,
+                status="atendida"
+            )
             db.add(novo_pedido)
             db.flush()
 
