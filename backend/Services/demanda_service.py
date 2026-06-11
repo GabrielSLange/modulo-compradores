@@ -1,12 +1,21 @@
+import logging
+import os
+import time
 from typing import Optional
-from sqlalchemy.orm import Session
+
+import httpx
 from sqlalchemy import desc
-from Models.demanda_model import Demanda
-from Models.demanda_recorrencia_model import DemandaRecorrencia
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
+
 from DTOs.Request.demanda_create_dto import DemandaCreateDTO
 from DTOs.Response.demanda_response_dto import DemandaResponseDTO
 from Events.Producers.demanda_producer import DemandaProducer
+from Models.demanda_model import Demanda
+from Models.demanda_recorrencia_model import DemandaRecorrencia
 from Services.estoque_service import EstoqueService
+
+logger = logging.getLogger(__name__)
 
 class DemandaService:
     @staticmethod
@@ -421,9 +430,6 @@ class DemandaService:
         cotacao_id: str,
         token: str
     ) -> DemandaResponseDTO:
-        import os
-        import httpx
-        
         demanda = db.query(Demanda).filter(
             Demanda.id_demanda == id_demanda,
             Demanda.id_empresa_comprador == id_empresa_comprador
@@ -455,26 +461,70 @@ class DemandaService:
         except Exception:
             pass
             
+        # Chama a API de Logística para contratar o frete.
+        # IMPORTANTE: POST /demo-contratar-frete retorna SolicitacaoFreteResponse,
+        # onde o campo 'frete_selecionado' vem como null (sem selectinload).
+        # O 'id' do objeto retornado é da solicitacao_frete, NÃO do frete_selecionado.
+        # Por isso, após o POST, fazemos um GET em /solicitacoes/{id} para obter
+        # o frete_selecionado.id real (único valor que satisfaz a FK fk_demanda_frete).
+        frete_selecionado_id = None
         try:
             with httpx.Client(timeout=10.0) as client:
+                # Etapa 1: Contratar o frete
                 response = client.post(url, json=payload, headers=headers)
                 response.raise_for_status()
+                resp_data = response.json()
+                solicitacao_id_retornado = resp_data.get("id")  # id da solicitacao_frete
+                
+                # Etapa 2: Buscar a solicitação completa para obter frete_selecionado.id
+                # O GET /solicitacoes/{id} faz selectinload e popula frete_selecionado
+                if solicitacao_id_retornado:
+                    url_detalhe = f"{logistica_url}/solicitacoes/{solicitacao_id_retornado}"
+                    resp_detalhe = client.get(url_detalhe, headers=headers)
+                    if resp_detalhe.status_code == 200:
+                        detalhe_data = resp_detalhe.json()
+                        frete_sel = detalhe_data.get("frete_selecionado")
+                        if frete_sel and frete_sel.get("id"):
+                            frete_selecionado_id = frete_sel["id"]
+                            logger.info(
+                                f"frete_selecionado.id obtido via GET /solicitacoes: "
+                                f"{frete_selecionado_id} (demanda={id_demanda})"
+                            )
+                        else:
+                            logger.warning(
+                                f"GET /solicitacoes/{solicitacao_id_retornado} retornou "
+                                f"frete_selecionado={frete_sel}. O frete pode ainda não ter sido "
+                                f"gravado. Resposta completa: {detalhe_data}"
+                            )
+                    else:
+                        logger.warning(
+                            f"GET /solicitacoes/{solicitacao_id_retornado} retornou "
+                            f"status {resp_detalhe.status_code}"
+                        )
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 409:
                 raise ValueError("Este frete já foi contratado ou a solicitação já foi processada.")
             raise ValueError(f"Erro ao contratar frete na API de Logística: {e.response.text or e}")
         except Exception as e:
             raise RuntimeError(f"Falha de conexão ao contratar frete na Logística: {str(e)}")
-            
-        demanda.id_frete_selecionado = cotacao_id
-        if valor_frete is not None:
-            demanda.valor_frete = valor_frete
-        demanda.status_frete = "SELECIONADO"
+
+        if not frete_selecionado_id:
+            # O frete_selecionado.id não foi obtido — não podemos salvar no banco Postgres
+            # pois a FK fk_demanda_frete exige que o id exista em portal_b2b.frete_selecionado.
+            # Apenas atualiza o status sem o campo de FK para não quebrar.
+            logger.warning(
+                f"Não foi possível obter frete_selecionado.id para demanda {id_demanda}. "
+                f"Atualizando status_frete sem salvar id_frete_selecionado."
+            )
+            demanda.status_frete = "SELECIONADO"
+        else:
+            # Temos o ID real do registro frete_selecionado — salva satisfazendo a FK
+            demanda.id_frete_selecionado = frete_selecionado_id
+            if valor_frete is not None:
+                demanda.valor_frete = valor_frete
+            demanda.status_frete = "SELECIONADO"
         
-        import time
-        from sqlalchemy.exc import IntegrityError
-        
-        max_retries = 5
+        max_retries = 3
         for attempt in range(max_retries):
             try:
                 db.commit()
@@ -482,16 +532,20 @@ class DemandaService:
             except IntegrityError as e:
                 db.rollback()
                 if attempt == max_retries - 1:
-                    raise ValueError(f"Erro ao contratar frete no banco local (violação de FK frete_selecionado): {e}")
+                    raise ValueError(
+                        f"Erro ao contratar frete no banco local (violação de FK frete_selecionado): {e}\n"
+                        f"frete_selecionado.id tentado: '{frete_selecionado_id}'. "
+                        f"Verifique se esse registro existe em portal_b2b.frete_selecionado."
+                    )
                 time.sleep(0.3)
-                # Refetch and update
                 demanda = db.query(Demanda).filter(
                     Demanda.id_demanda == id_demanda,
                     Demanda.id_empresa_comprador == id_empresa_comprador
                 ).first()
                 if not demanda:
                     raise ValueError("Demanda não encontrada após rollback de contratação de frete.")
-                demanda.id_frete_selecionado = cotacao_id
+                if frete_selecionado_id:
+                    demanda.id_frete_selecionado = frete_selecionado_id
                 if valor_frete is not None:
                     demanda.valor_frete = valor_frete
                 demanda.status_frete = "SELECIONADO"
