@@ -25,7 +25,12 @@ function ListarESelecionarFrete({ idDemanda }: { idDemanda: string }) {
       {cotacoes.map((c: any) => (
         <div key={c.id} className="p-3 border rounded-lg flex justify-between items-center bg-background">
           <div>
-            <span className="block font-medium text-sm">{c.transportadora_nome || c.id_transportadora || "Transportadora " + c.id}</span>
+            <span className="block font-medium text-sm">
+              {c.transportadora_nome ||
+                (c.transportadora_id
+                  ? "Transportadora (" + c.transportadora_id.slice(0, 8) + ")"
+                  : "Transportadora " + c.id.slice(0, 8))}
+            </span>
             <span className="text-xs text-muted-foreground">Prazo: {c.prazo_dias || c.prazo} dias</span>
           </div>
           <div className="flex items-center gap-3">
@@ -178,7 +183,7 @@ export function VisualizarDemandaDialog({ demanda }: Props) {
                 </span>
 
                 {/* Caso o frete já tenha sido contratado */}
-                {demanda.id_frete_selecionado ? (
+                {demanda.id_frete_selecionado || (demanda.status_frete && demanda.status_frete !== "PENDENTE") ? (
                   <div className="p-3 bg-blue-50/50 text-blue-900 border border-blue-200/50 rounded-lg text-sm flex justify-between items-center">
                     <div>
                       <span className="block text-xs text-blue-700">Frete Contratado</span>
@@ -187,6 +192,10 @@ export function VisualizarDemandaDialog({ demanda }: Props) {
                     <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded font-semibold text-xs uppercase tracking-wider">
                       {demanda.status_frete || "SELECIONADO"}
                     </span>
+                  </div>
+                ) : demanda.status === "cancelada" ? (
+                  <div className="p-3 bg-destructive/10 text-destructive border border-destructive/20 rounded-lg text-sm">
+                    Não é possível contratar frete para um pedido cancelado.
                   </div>
                 ) : (
                   /* Caso precise contratar */
