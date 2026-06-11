@@ -20,6 +20,18 @@ export function useDemandas() {
     queryKey: KEY,
     queryFn: () => listarDemandas(),
     staleTime: 4000,
+    // Polling inteligente: faz refetch a cada 5 segundos apenas se houver
+    // algum pedido ativo que possui frete e ainda não foi entregue ou cancelado.
+    refetchInterval: (query) => {
+      const demandas = query.state.data;
+      const temFreteAtivo = demandas?.some(
+        (d) =>
+          d.is_pedido &&
+          d.status_frete &&
+          !["ENTREGUE", "CANCELADA", "PENDENTE"].includes(d.status_frete.toUpperCase())
+      );
+      return temFreteAtivo ? 5000 : false;
+    },
   });
 }
 

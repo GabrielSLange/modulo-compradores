@@ -25,10 +25,11 @@ def processar_evento_logistica(event_data: dict) -> None:
     p = event_data.get("payload", {})
     # O pedido_id na Logística corresponde ao id_demanda no nosso microsserviço
     id_demanda = p.get("pedido_id") or p.get("solicitacao_id")
-    novo_status = p.get("status")
+    # Tenta obter status_atual (formato real do evento) e cai de volta para status
+    novo_status = p.get("status_atual") or p.get("status")
 
     if not id_demanda or not novo_status:
-        logger.warning("Evento logistica_status_atualizado recebido sem pedido_id/solicitacao_id ou status no payload.")
+        logger.warning("Evento logistica_status_atualizado recebido sem pedido_id/solicitacao_id ou status/status_atual no payload.")
         return
 
     with SessionLocal() as db:
