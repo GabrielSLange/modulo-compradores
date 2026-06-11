@@ -112,7 +112,7 @@ export function DemandasTab({ isPedido = false }: DemandasTabProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading || isFetching
+            {isLoading
               ? Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
                   <TableCell colSpan={7}><Skeleton className="h-10 w-full" /></TableCell>
